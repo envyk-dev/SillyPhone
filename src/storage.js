@@ -1,17 +1,18 @@
-// Wrappers around SillyTavern's chat_metadata for SillyPhone's per-chat state.
-import { chat_metadata, saveChatDebounced } from '../../../../../script.js';
+// Wrappers around SillyTavern's chatMetadata for SillyPhone's per-chat state.
+import { ctx } from './st.js';
 
 const KEY = 'sillyphone';
 
 function getState() {
-    if (!chat_metadata[KEY]) {
-        chat_metadata[KEY] = { thread: [], unread: 0, main_summary: null };
+    const meta = ctx().chatMetadata;
+    if (!meta[KEY]) {
+        meta[KEY] = { thread: [], unread: 0, main_summary: null };
     }
-    return chat_metadata[KEY];
+    return meta[KEY];
 }
 
 function persist() {
-    saveChatDebounced();
+    ctx().saveMetadataDebounced();
 }
 
 export function getThread() {

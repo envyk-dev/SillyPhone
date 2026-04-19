@@ -1,7 +1,7 @@
 // Summary cache + rolling-memory orchestration.
 // - ensureFresh(): on-demand summary for phone generation context
 // - checkRollingTrigger(): opt-in periodic summarize + /hide for main chat
-import { executeSlashCommandsWithOptions, chat } from '../../../../../script.js';
+import { ctx, runSlashCommand } from './st.js';
 import { buildSummarizationPrompt } from './prompt-builder.js';
 import * as storage from './storage.js';
 import * as settings from './settings.js';
@@ -12,39 +12,33 @@ const STALE_DRIFT = 5;
 
 let lastTriggerLen = 0;
 
+function getChat() {
+    const c = ctx().chat;
+    return Array.isArray(c) ? c : [];
+}
+
 export function needsSummary() {
-    if (!Array.isArray(chat)) return false;
-    return chat.length > SUMMARY_THRESHOLD;
+    return getChat().length > SUMMARY_THRESHOLD;
 }
 
 function summaryStale() {
+    const chat = getChat();
     const cached = storage.getSummary();
     if (!cached) return true;
     const expectedCoverage = chat.length - 10;
     if (cached.coveredUpToIdx < expectedCoverage - STALE_DRIFT) return true;
-    if (cached.coveredUpToIdx > chat.length) return true; // chat shrunk → invalid
+    if (cached.coveredUpToIdx > chat.length) return true;
     return false;
-}
-
-function escapeForSlash(s) {
-    return s
-        .replaceAll('\\', '\\\\')
-        .replaceAll('|', '\\|')
-        .replaceAll('{{', '\\{\\{')
-        .replaceAll('}}', '\\}\\}');
 }
 
 async function runSummarization(messages, customPrompt) {
     const prompt = buildSummarizationPrompt(messages, customPrompt);
-    const safe = escapeForSlash(prompt);
-    const result = await executeSlashCommandsWithOptions(
-        `/genraw lock=off instruct=off ${safe}`,
-        { showOutput: false },
-    );
-    return (result?.pipe ?? '').trim();
+    const raw = await ctx().generateRaw({ prompt });
+    return (raw ?? '').trim();
 }
 
 export async function ensureFresh() {
+    const chat = getChat();
     if (!needsSummary()) {
         if (storage.getSummary()) storage.resetSummary();
         return null;
@@ -70,7 +64,7 @@ export async function ensureFresh() {
 export async function checkRollingTrigger() {
     const rm = settings.get('rollingMemory');
     if (!rm || !rm.enabled) return;
-    if (!Array.isArray(chat)) return;
+    const chat = getChat();
 
     const len = chat.length;
     const hiddenUpTo = len - (rm.keepRecent || 10);
@@ -80,14 +74,10 @@ export async function checkRollingTrigger() {
     lastTriggerLen = len;
 
     await ensureFresh();
-    const summary = storage.getSummary();
-    if (!summary) return;
+    if (!storage.getSummary()) return;
 
     try {
-        await executeSlashCommandsWithOptions(
-            `/hide 0-${hiddenUpTo - 1}`,
-            { showOutput: false },
-        );
+        await runSlashCommand(`/hide 0-${hiddenUpTo - 1}`);
     } catch (err) {
         console.warn('[SillyPhone] /hide failed', err);
     }

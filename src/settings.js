@@ -1,5 +1,5 @@
-// Global extension settings. UI is mounted in Task 12.
-import { extension_settings, saveSettingsDebounced } from '../../../../../script.js';
+// Global extension settings — stored in ctx().extensionSettings.
+import { ctx } from './st.js';
 import {
     DEFAULT_FLOW_A_INSTRUCTIONS,
     DEFAULT_FLOW_B_TEMPLATE,
@@ -22,14 +22,22 @@ const DEFAULTS = {
     flowBPromptTemplate: DEFAULT_FLOW_B_TEMPLATE,
 };
 
+function getStore() {
+    return ctx().extensionSettings;
+}
+
+function persist() {
+    ctx().saveSettingsDebounced();
+}
+
 function ensureInitialized() {
-    if (!extension_settings[KEY]) {
-        extension_settings[KEY] = structuredClone(DEFAULTS);
-        saveSettingsDebounced();
+    const store = getStore();
+    if (!store[KEY]) {
+        store[KEY] = structuredClone(DEFAULTS);
+        persist();
         return;
     }
-    // Merge new defaults for forward-compat — don't overwrite user changes
-    const s = extension_settings[KEY];
+    const s = store[KEY];
     for (const [k, v] of Object.entries(DEFAULTS)) {
         if (s[k] === undefined) {
             s[k] = structuredClone(v);
@@ -39,7 +47,7 @@ function ensureInitialized() {
             }
         }
     }
-    saveSettingsDebounced();
+    persist();
 }
 
 export function init() {
@@ -48,22 +56,22 @@ export function init() {
 
 export function get(key) {
     ensureInitialized();
-    return extension_settings[KEY][key];
+    return getStore()[KEY][key];
 }
 
 export function set(key, value) {
     ensureInitialized();
-    extension_settings[KEY][key] = value;
-    saveSettingsDebounced();
+    getStore()[KEY][key] = value;
+    persist();
 }
 
 export function setNested(key, subKey, value) {
     ensureInitialized();
-    extension_settings[KEY][key][subKey] = value;
-    saveSettingsDebounced();
+    getStore()[KEY][key][subKey] = value;
+    persist();
 }
 
 export function getAll() {
     ensureInitialized();
-    return extension_settings[KEY];
+    return getStore()[KEY];
 }

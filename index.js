@@ -1,5 +1,5 @@
 // SillyPhone entry point — wires events, UI, and generation flows.
-import { eventSource, event_types, name2, chat, getThumbnailUrl } from '../../../../script.js';
+import { ctx } from './src/st.js';
 import * as settings from './src/settings.js';
 import * as storage from './src/storage.js';
 import * as context from './src/context.js';
@@ -11,16 +11,17 @@ import * as toast from './src/ui/toast.js';
 import * as modal from './src/ui/modal.js';
 import * as settingsPanel from './src/ui/settings-panel.js';
 
-// Dedupe Flow A parsing by (messageIdx, swipeId)
 let lastParsedKey = null;
 
-function getCharAvatar() {
-    try { return getThumbnailUrl?.('avatar', name2) || ''; }
-    catch { return ''; }
+function currentCharName() {
+    return ctx().name2 || 'Contact';
 }
 
-function currentCharName() {
-    return name2 || 'Contact';
+function getCharAvatar() {
+    try {
+        const c = ctx();
+        return c.getThumbnailUrl?.('avatar', c.name2) || '';
+    } catch { return ''; }
 }
 
 function openPhone() {
@@ -31,10 +32,9 @@ function openPhone() {
 
 function handleMessageReceived(messageIdx) {
     if (!settings.get('enabled')) return;
-
-    // Rolling memory is independent of marker parsing — always check
     memory.checkRollingTrigger();
 
+    const chat = ctx().chat;
     if (messageIdx == null || !Array.isArray(chat) || !chat[messageIdx]) return;
     const msg = chat[messageIdx];
     if (msg.is_user) return;
@@ -107,18 +107,30 @@ async function handleSend(text) {
 }
 
 function init() {
-    settings.init();
-    modal.mount({ onSend: handleSend });
-    modal.setCharInfo(currentCharName(), getCharAvatar());
-    badge.mount(openPhone);
-    settingsPanel.mount();
+    try {
+        const c = ctx();
+        settings.init();
+        modal.mount({ onSend: handleSend });
+        modal.setCharInfo(currentCharName(), getCharAvatar());
+        badge.mount(openPhone);
+        settingsPanel.mount();
 
-    eventSource.on(event_types.MESSAGE_RECEIVED, handleMessageReceived);
-    eventSource.on(event_types.MESSAGE_SENT, handleMessageSent);
-    eventSource.on(event_types.CHAT_CHANGED, handleChatChanged);
+        c.eventSource.on(c.eventTypes.MESSAGE_RECEIVED, handleMessageReceived);
+        c.eventSource.on(c.eventTypes.MESSAGE_SENT, handleMessageSent);
+        c.eventSource.on(c.eventTypes.CHAT_CHANGED, handleChatChanged);
 
-    context.updateAll();
-    console.log('[SillyPhone] loaded');
+        context.updateAll();
+        console.log('[SillyPhone] loaded v0.2.0');
+    } catch (err) {
+        console.error('[SillyPhone] init failed', err);
+    }
 }
 
-init();
+// SillyTavern may load extensions before its own context is ready — wait for body idle.
+if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
+    init();
+} else {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(init, 100);
+    });
+}

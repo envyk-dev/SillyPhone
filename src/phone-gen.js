@@ -1,5 +1,5 @@
-// Flow B: user sends SMS → dedicated /genraw call → parse JSON → bubbles.
-import { executeSlashCommandsWithOptions, name2, chat, getCharacterCardFields } from '../../../../../script.js';
+// Flow B: user sends SMS → dedicated generateRaw call → parse JSON → bubbles.
+import { ctx } from './st.js';
 import { buildPhonePrompt } from './prompt-builder.js';
 import * as storage from './storage.js';
 import * as settings from './settings.js';
@@ -10,18 +10,22 @@ const GEN_TIMEOUT_MS = 60000;
 
 function getCharCard() {
     try {
-        const fields = getCharacterCardFields?.();
-        if (!fields) return '';
+        const c = ctx();
+        const id = c.characterId;
+        if (id == null || !Array.isArray(c.characters)) return '';
+        const char = c.characters[id];
+        if (!char) return '';
         return [
-            fields.description,
-            fields.personality,
-            fields.scenario,
-            fields.mes_example,
+            char.description,
+            char.personality,
+            char.scenario,
+            char.mes_example,
         ].filter(Boolean).join('\n\n');
     } catch { return ''; }
 }
 
 function getRecentMainMsgs(n) {
+    const chat = ctx().chat;
     if (!Array.isArray(chat)) return [];
     return chat
         .slice(-n)
@@ -32,9 +36,7 @@ function getRecentMainMsgs(n) {
 export function parseResponse(raw) {
     if (!raw || typeof raw !== 'string') return null;
     let s = raw.trim();
-    // strip ```json ... ``` fences
     s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    // find first { ... } block defensively
     const first = s.indexOf('{');
     const last = s.lastIndexOf('}');
     if (first !== -1 && last !== -1) s = s.slice(first, last + 1);
@@ -48,27 +50,18 @@ export function parseResponse(raw) {
     }
 }
 
-function escapeForSlash(s) {
-    return s
-        .replaceAll('\\', '\\\\')
-        .replaceAll('|', '\\|')
-        .replaceAll('{{', '\\{\\{')
-        .replaceAll('}}', '\\}\\}');
-}
-
-async function runGenraw(prompt) {
-    const safe = escapeForSlash(prompt);
-    const cmd = `/genraw lock=off instruct=off ${safe}`;
+async function runGen(prompt) {
+    const c = ctx();
     const result = await Promise.race([
-        executeSlashCommandsWithOptions(cmd, { showOutput: false }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('genraw timeout')), GEN_TIMEOUT_MS)),
+        c.generateRaw({ prompt }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('generateRaw timeout')), GEN_TIMEOUT_MS)),
     ]);
-    return result?.pipe ?? '';
+    return typeof result === 'string' ? result : (result?.text ?? '');
 }
 
 export async function generateReply(userMsg) {
     const summary = await memory.ensureFresh();
-    const charName = name2 || 'the character';
+    const charName = ctx().name2 || 'the character';
     const charCard = getCharCard();
     const recentMainMsgs = getRecentMainMsgs(RECENT_MAIN_MSGS);
     const smsThread = storage.getThread();
@@ -83,12 +76,12 @@ export async function generateReply(userMsg) {
         template: settings.get('flowBPromptTemplate'),
     });
 
-    let raw = await runGenraw(prompt);
+    let raw = await runGen(prompt);
     let parsed = parseResponse(raw);
 
     if (!parsed) {
         const retryPrompt = prompt + '\n\nREMINDER: Output ONLY JSON like {"msgs":["text"]}. No other text.';
-        raw = await runGenraw(retryPrompt);
+        raw = await runGen(retryPrompt);
         parsed = parseResponse(raw);
     }
 
