@@ -1,0 +1,354 @@
+// Full-screen phone modal: header, messages, input bar, menu sheet, manage mode.
+// Bursts are sourced from ctx().chat via chat-sms; storage is only used for
+// the unread counter.
+import * as storage from '../storage.js';
+import * as bubbles from './bubbles.js';
+import * as chatSms from '../chat-sms.js';
+import { deleteMessageFromBurst, deleteAttachmentFromBurst } from '../chat-sms.js';
+import { ctx, cutChatMessage, replaceChatMessage } from '../st.js';
+import { playBubbles } from './playback.js';
+
+let modalEl = null;
+let messagesEl = null;
+let inputEl = null;
+let sendBtn = null;
+let closeBtn = null;
+let menuBtn = null;
+let attachBtn = null;
+let attachmentChipEl = null;
+let onSendHandler = null;
+let charName = 'Contact';
+let manageMode = false;
+
+// Attachment staged for the next send. null when none. Cleared on send or
+// when the user clicks the chip's × button.
+let stagedAttachment = null;
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+}
+
+export function mount({ onSend }) {
+    onSendHandler = onSend;
+    if (modalEl) return;
+
+    modalEl = document.createElement('div');
+    modalEl.id = 'sillyphone-modal';
+    modalEl.setAttribute('role', 'dialog');
+    modalEl.setAttribute('aria-modal', 'true');
+    modalEl.style.display = 'none';
+    modalEl.innerHTML = `
+        <div class="sp-modal-inner">
+            <header class="sp-modal-header">
+                <button class="sp-modal-close" aria-label="Close phone">←</button>
+                <div class="sp-modal-name"></div>
+                <button class="sp-modal-menu" aria-label="Menu">⋮</button>
+            </header>
+            <div class="sp-modal-messages" role="log" aria-live="polite"></div>
+            <form class="sp-modal-input">
+                <div class="sp-attachment-chip" hidden></div>
+                <div class="sp-input-row">
+                    <button type="button" class="sp-attachment-btn" aria-label="Add attachment">+</button>
+                    <textarea placeholder="Type a mesage... (line = bubble)" rows="1" aria-label="Message input"></textarea>
+                    <button type="submit" aria-label="Send">➤</button>
+                </div>
+            </form>
+        </div>
+    `;
+    (document.documentElement || document.body).appendChild(modalEl);
+
+    messagesEl = modalEl.querySelector('.sp-modal-messages');
+    inputEl = modalEl.querySelector('textarea');
+    sendBtn = modalEl.querySelector('.sp-modal-input button[type="submit"]');
+    closeBtn = modalEl.querySelector('.sp-modal-close');
+    menuBtn = modalEl.querySelector('.sp-modal-menu');
+    attachBtn = modalEl.querySelector('.sp-attachment-btn');
+    attachmentChipEl = modalEl.querySelector('.sp-attachment-chip');
+
+    closeBtn.addEventListener('click', handleCloseClick);
+    menuBtn.addEventListener('click', openMenu);
+    attachBtn.addEventListener('click', openAttachmentMenu);
+
+    modalEl.addEventListener('click', (e) => {
+        // Only trigger on true backdrop clicks. closest() would misfire when
+        // a child (e.g. sheet button) is removed mid-click — its detached
+        // target returns null from closest and spuriously dismisses.
+        if (e.target === modalEl) handleCloseClick();
+    });
+
+    modalEl.querySelector('.sp-modal-input').addEventListener('submit', (e) => {
+        e.preventDefault();
+        submitInput();
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            submitInput();
+        }
+    });
+
+    inputEl.addEventListener('input', autoGrow);
+
+    messagesEl.addEventListener('click', handleMessagesClick);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen()) {
+            if (manageMode) exitManageMode();
+            else close();
+        }
+    });
+}
+
+function autoGrow() {
+    if (!inputEl) return;
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+}
+
+function submitInput() {
+    const text = inputEl.value;
+    if (!text.trim() && !stagedAttachment) return;
+    if (sendBtn.disabled) return;
+    const payload = { text, attachment: stagedAttachment };
+    inputEl.value = '';
+    stagedAttachment = null;
+    renderStagedAttachment();
+    autoGrow();
+    if (onSendHandler) onSendHandler(payload);
+}
+
+export function setCharInfo(name) {
+    charName = name || 'Contact';
+    if (!modalEl) return;
+    modalEl.querySelector('.sp-modal-name').textContent = charName;
+}
+
+export function open() {
+    if (!modalEl) return;
+    modalEl.style.display = 'flex';
+    storage.clearUnread();
+    refresh();
+    setTimeout(() => inputEl?.focus(), 50);
+}
+
+export function close() {
+    if (!modalEl) return;
+    if (manageMode) exitManageMode();
+    modalEl.style.display = 'none';
+}
+
+export function isOpen() {
+    return !!modalEl && modalEl.style.display !== 'none';
+}
+
+export function isManageMode() {
+    return manageMode;
+}
+
+export function refresh() {
+    if (!modalEl) return;
+    const bursts = chatSms.listBursts(ctx().chat);
+    bubbles.renderThread(bursts, messagesEl);
+}
+
+export function appendBurst(burst) {
+    if (!modalEl || !isOpen()) return;
+    if (manageMode) {
+        refresh();
+    } else {
+        bubbles.appendBurst(burst, messagesEl);
+    }
+}
+
+export function showTyping() {
+    if (!modalEl || !isOpen() || manageMode) return;
+    bubbles.showTyping(messagesEl);
+}
+
+export function hideTyping() {
+    if (!modalEl) return;
+    bubbles.hideTyping(messagesEl);
+}
+
+export function setSendDisabled(disabled) {
+    if (sendBtn) sendBtn.disabled = disabled;
+}
+
+// Force scroll to bottom, bypassing the "only if near bottom" heuristic.
+// Used when the user sends a message so their own text is always visible.
+export function scrollToBottom() {
+    if (!messagesEl) return;
+    requestAnimationFrame(() => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
+}
+
+export async function playCharBurst(msgs, ts, attachment, timing) {
+    if (!modalEl || !isOpen()) return;
+    if (manageMode) {
+        refresh();
+        return;
+    }
+    await playBubbles(msgs, messagesEl, 'char', ts, attachment ?? null, timing ?? null);
+}
+
+// ---------- Attachment staging ----------
+
+function renderStagedAttachment() {
+    if (!attachmentChipEl) return;
+    if (!stagedAttachment) {
+        attachmentChipEl.hidden = true;
+        attachmentChipEl.innerHTML = '';
+        return;
+    }
+    const icon = stagedAttachment.kind === 'video' ? '🎥' : '📷';
+    const kindLabel = stagedAttachment.kind === 'video' ? 'Video' : 'Image';
+    attachmentChipEl.hidden = false;
+    attachmentChipEl.innerHTML = `
+        <span class="sp-attachment-chip-icon">${icon}</span>
+        <span class="sp-attachment-chip-label">${kindLabel}: ${escapeHtml(stagedAttachment.description)}</span>
+        <button type="button" class="sp-attachment-chip-clear" aria-label="Remove attachment">×</button>
+    `;
+    attachmentChipEl.querySelector('.sp-attachment-chip-clear')
+        .addEventListener('click', clearStagedAttachment);
+}
+
+function clearStagedAttachment() {
+    stagedAttachment = null;
+    renderStagedAttachment();
+}
+
+function openAttachmentMenu() {
+    if (manageMode) return;
+    showSheet([
+        { label: 'Send image', icon: '📷', action: () => promptAttachmentDescription('image') },
+        { label: 'Send video', icon: '🎥', action: () => promptAttachmentDescription('video') },
+    ]);
+}
+
+function promptAttachmentDescription(kind) {
+    const label = kind === 'video' ? 'video' : 'image';
+    const desc = window.prompt(`Describe the ${label} you want to send:\n(Visible to the character's context, not shown in the chat)`);
+    if (desc == null) return;
+    const trimmed = desc.trim();
+    if (!trimmed) return;
+    stagedAttachment = { kind, description: trimmed };
+    renderStagedAttachment();
+    inputEl?.focus();
+}
+
+// ---------- Menu sheet ----------
+
+function handleCloseClick() {
+    if (manageMode) exitManageMode();
+    else close();
+}
+
+function openMenu() {
+    if (manageMode) return;
+    showSheet([
+        { label: 'Delete messages', icon: '✕', action: enterManageMode },
+        { label: 'Clear chat', icon: '🗑', action: confirmClearChat, destructive: true },
+    ]);
+}
+
+function showSheet(items) {
+    const existing = modalEl.querySelector('.sp-sheet');
+    if (existing) existing.remove();
+
+    const sheet = document.createElement('div');
+    sheet.className = 'sp-sheet';
+    sheet.innerHTML = `
+        <div class="sp-sheet-backdrop"></div>
+        <div class="sp-sheet-content">
+            ${items.map((item, i) => `
+                <button class="sp-sheet-btn ${item.destructive ? 'sp-sheet-destructive' : ''}" data-idx="${i}">
+                    <span class="sp-sheet-icon">${item.icon || ''}</span>
+                    <span>${item.label}</span>
+                </button>
+            `).join('')}
+            <button class="sp-sheet-btn sp-sheet-cancel" data-cancel>Cancel</button>
+        </div>
+    `;
+    modalEl.querySelector('.sp-modal-inner').appendChild(sheet);
+
+    const dismiss = () => sheet.remove();
+    sheet.querySelector('.sp-sheet-backdrop').addEventListener('click', dismiss);
+    sheet.querySelector('[data-cancel]').addEventListener('click', dismiss);
+    sheet.querySelectorAll('[data-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = Number(btn.dataset.idx);
+            dismiss();
+            items[idx].action();
+        });
+    });
+}
+
+async function confirmClearChat() {
+    if (!confirm('Clear entire phone conversation for this chat? This cannot be undone.')) return;
+    const bursts = chatSms.listBursts(ctx().chat);
+    // Cut highest index first so earlier indices stay valid during deletion.
+    for (let i = bursts.length - 1; i >= 0; i--) {
+        // eslint-disable-next-line no-await-in-loop
+        await cutChatMessage(bursts[i].chatIdx);
+    }
+    storage.clearUnread();
+    refresh();
+}
+
+// ---------- Manage mode ----------
+
+function enterManageMode() {
+    manageMode = true;
+    refresh();
+    messagesEl.classList.add('sp-manage-mode');
+    closeBtn.textContent = 'Done';
+    closeBtn.classList.add('sp-manage-done');
+    closeBtn.setAttribute('aria-label', 'Done managing messages');
+    menuBtn.style.visibility = 'hidden';
+    sendBtn.disabled = true;
+    attachBtn.disabled = true;
+    inputEl.disabled = true;
+    inputEl.placeholder = 'Tap to delete';
+}
+
+function exitManageMode() {
+    manageMode = false;
+    messagesEl.classList.remove('sp-manage-mode');
+    closeBtn.textContent = '←';
+    closeBtn.classList.remove('sp-manage-done');
+    closeBtn.setAttribute('aria-label', 'Close phone');
+    menuBtn.style.visibility = '';
+    sendBtn.disabled = false;
+    attachBtn.disabled = false;
+    inputEl.disabled = false;
+    inputEl.placeholder = 'Type a mesage... (line = bubble)';
+}
+
+async function handleMessagesClick(e) {
+    if (!manageMode) return;
+    const target = e.target.closest('.sp-bubble, .sp-attachment-placeholder');
+    if (!target) return;
+    const chatIdx = Number(target.dataset.entryIdx);
+    if (!Number.isInteger(chatIdx)) return;
+    const chatMsg = ctx().chat?.[chatIdx];
+    if (!chatMsg) return;
+
+    if (target.classList.contains('sp-attachment-placeholder')) {
+        if (!confirm('Delete this attachment? This cannot be undone.')) return;
+        const r = deleteAttachmentFromBurst(chatMsg);
+        if (r.action === 'update') replaceChatMessage(chatIdx, r.msg);
+        else if (r.action === 'remove') await cutChatMessage(chatIdx);
+    } else {
+        const msgIdx = Number(target.dataset.msgIdx);
+        if (!Number.isInteger(msgIdx)) return;
+        if (!confirm('Delete this message? This cannot be undone.')) return;
+        const r = deleteMessageFromBurst(chatMsg, msgIdx);
+        if (r.action === 'update') replaceChatMessage(chatIdx, r.msg);
+        else if (r.action === 'remove') await cutChatMessage(chatIdx);
+    }
+    refresh();
+}

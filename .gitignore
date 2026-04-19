@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+*.log
+
+# Dev planning / internal working docs
+.planning/
+docs/
+MANUAL-TESTS.md
