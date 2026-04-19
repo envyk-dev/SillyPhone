@@ -1,5 +1,5 @@
 // Flow B: user sends SMS → dedicated /genraw call → parse JSON → bubbles.
-import { executeSlashCommandsWithOptions, name2, chat, getCharacterCardFields } from '../../../../script.js';
+import { executeSlashCommandsWithOptions, name2, chat, getCharacterCardFields } from '../../../../../script.js';
 import { buildPhonePrompt } from './prompt-builder.js';
 import * as storage from './storage.js';
 import * as settings from './settings.js';

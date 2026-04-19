@@ -1,7 +1,7 @@
 // Summary cache + rolling-memory orchestration.
 // - ensureFresh(): on-demand summary for phone generation context
 // - checkRollingTrigger(): opt-in periodic summarize + /hide for main chat
-import { executeSlashCommandsWithOptions, chat } from '../../../../script.js';
+import { executeSlashCommandsWithOptions, chat } from '../../../../../script.js';
 import { buildSummarizationPrompt } from './prompt-builder.js';
 import * as storage from './storage.js';
 import * as settings from './settings.js';

@@ -1,5 +1,5 @@
 // Wrappers around SillyTavern's chat_metadata for SillyPhone's per-chat state.
-import { chat_metadata, saveChatDebounced } from '../../../../script.js';
+import { chat_metadata, saveChatDebounced } from '../../../../../script.js';
 
 const KEY = 'sillyphone';
 

@@ -1,5 +1,5 @@
 // Global extension settings. UI is mounted in Task 12.
-import { extension_settings, saveSettingsDebounced } from '../../../../script.js';
+import { extension_settings, saveSettingsDebounced } from '../../../../../script.js';
 import {
     DEFAULT_FLOW_A_INSTRUCTIONS,
     DEFAULT_FLOW_B_TEMPLATE,

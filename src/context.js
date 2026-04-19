@@ -1,5 +1,5 @@
 // Owns the setExtensionPrompt entries for SMS log, summary, and Flow A instructions.
-import { setExtensionPrompt, extension_prompt_types, extension_prompt_roles } from '../../../../script.js';
+import { setExtensionPrompt, extension_prompt_types, extension_prompt_roles } from '../../../../../script.js';
 import * as storage from './storage.js';
 import * as settings from './settings.js';
 import { formatSmsLog } from './prompt-builder.js';
