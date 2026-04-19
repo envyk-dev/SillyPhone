@@ -1,0 +1,285 @@
+/* SillyPhone styles */
+
+/* ---------- Badge ---------- */
+#sillyphone-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #0a84ff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.5);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    padding: 0;
+    transition: transform 0.15s ease;
+}
+
+#sillyphone-badge:hover { transform: scale(1.08); }
+#sillyphone-badge:active { transform: scale(0.95); }
+
+#sillyphone-badge .sp-badge-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ff3b30;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    padding: 0 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+}
+
+/* ---------- Toast ---------- */
+#sillyphone-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.sp-toast {
+    background: rgba(44, 44, 46, 0.96);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    max-width: 280px;
+    cursor: pointer;
+    pointer-events: auto;
+    animation: sp-toast-in 0.25s ease-out;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.sp-toast-dismiss { animation: sp-toast-out 0.3s ease-in forwards; }
+
+.sp-toast-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0a84ff;
+    margin-bottom: 3px;
+}
+
+.sp-toast-body {
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+@keyframes sp-toast-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sp-toast-out {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(20px); }
+}
+
+@media (max-width: 600px) {
+    #sillyphone-toast-container {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+    }
+    .sp-toast { max-width: none; }
+}
+
+/* ---------- Modal ---------- */
+#sillyphone-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.sp-modal-inner {
+    background: #1c1c1e;
+    color: white;
+    width: 100%;
+    height: 100%;
+    max-width: 420px;
+    max-height: 720px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 600px) {
+    .sp-modal-inner {
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+    }
+}
+
+.sp-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #2c2c2e;
+    background: #2a2a2c;
+}
+
+.sp-modal-header button {
+    background: transparent;
+    color: white;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 6px 10px;
+}
+
+.sp-modal-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.sp-modal-name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.sp-modal-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sp-bubble {
+    max-width: 75%;
+    padding: 8px 13px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.sp-bubble-char {
+    background: #3a3a3c;
+    color: white;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+
+.sp-bubble-user {
+    background: #0a84ff;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+}
+
+.sp-timestamp {
+    text-align: center;
+    font-size: 11px;
+    color: #8e8e93;
+    margin: 10px 0 4px;
+}
+
+.sp-typing {
+    align-self: flex-start;
+    background: #3a3a3c;
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    gap: 4px;
+}
+
+.sp-typing span {
+    width: 7px;
+    height: 7px;
+    background: #8e8e93;
+    border-radius: 50%;
+    animation: sp-bounce 1.2s infinite;
+}
+
+.sp-typing span:nth-child(2) { animation-delay: 0.2s; }
+.sp-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes sp-bounce {
+    0%, 60%, 100% { transform: translateY(0);   opacity: 0.5; }
+    30%           { transform: translateY(-5px); opacity: 1; }
+}
+
+.sp-modal-input {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid #2c2c2e;
+    background: #2a2a2c;
+}
+
+.sp-modal-input textarea {
+    flex: 1;
+    background: #3a3a3c;
+    color: white;
+    border: none;
+    border-radius: 18px;
+    padding: 10px 14px;
+    font-size: 14px;
+    resize: none;
+    font-family: inherit;
+    max-height: 120px;
+}
+
+.sp-modal-input textarea:focus { outline: 2px solid #0a84ff; }
+
+.sp-modal-input button {
+    background: #0a84ff;
+    color: white;
+    border: none;
+    border-radius: 18px;
+    padding: 0 16px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.sp-modal-input button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---------- Settings panel ---------- */
+.sp-settings label { display: block; margin: 6px 0; }
+.sp-settings h4 { margin: 8px 0 4px; font-size: 13px; }
+.sp-settings textarea { font-family: monospace; font-size: 12px; }
+.sp-settings hr { border: none; border-top: 1px solid #444; margin: 10px 0; }
+.sp-settings button { margin-top: 6px; margin-right: 6px; }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    .sp-typing span,
+    .sp-toast { animation: none; }
+    #sillyphone-badge { transition: none; }
+}
