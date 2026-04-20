@@ -78,6 +78,17 @@ function v05DefaultMissingExample(value) {
     return looksLikeDefault && !hasExample;
 }
 
+// v0.6 → v0.7: added an "Output format ≠ history format" DO/DON'T section
+// so models that drift to emitting the display format get corrected.
+function v06DefaultMissingOutputFormat(value) {
+    if (typeof value !== 'string' || !value) return false;
+    const looksLikeDefault = value.includes('<!--Phone:{"msgs":["text1","text2"]}-->')
+        && value.includes('Phone / SMS system (SillyPhone extension)')
+        && value.includes('Example exchange');
+    const hasOutputFormat = value.includes('Output format ≠ history format');
+    return looksLikeDefault && !hasOutputFormat;
+}
+
 function isLikelyStaleDefaultFlowA(value) {
     if (typeof value !== 'string' || !value) return false;
     for (const fp of OLD_FLOW_A_FINGERPRINTS) {
@@ -85,6 +96,7 @@ function isLikelyStaleDefaultFlowA(value) {
     }
     if (v04DefaultMissingTiming(value)) return true;
     if (v05DefaultMissingExample(value)) return true;
+    if (v06DefaultMissingOutputFormat(value)) return true;
     return false;
 }
 

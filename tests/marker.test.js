@@ -166,3 +166,37 @@ test('parse: timing carries across multi-marker when first has timing', () => {
         timing: [{ delay: 500 }, {}],
     });
 });
+
+test('parse: fallback — leaked [SMS] block with bullets is accepted when no marker', () => {
+    const text = '[SMS]\n- hey\n- u free';
+    assert.deepEqual(parse(text), { msgs: ['hey', 'u free'] });
+});
+
+test('parse: fallback — leaked block embedded in prose still parses', () => {
+    const text = 'she checks her phone and taps out:\n[SMS]\n- hey\n- u around';
+    assert.deepEqual(parse(text), { msgs: ['hey', 'u around'] });
+});
+
+test('parse: fallback — bare [SMS] header with no bullets returns null', () => {
+    assert.equal(parse('[SMS]'), null);
+});
+
+test('parse: marker takes priority over leaked block if both present', () => {
+    const text = '[SMS]\n- stale\n<!--Phone:{"msgs":["fresh"]}-->';
+    assert.deepEqual(parse(text), { msgs: ['fresh'] });
+});
+
+test('strip: removes leaked [SMS] block from displayed text', () => {
+    const text = 'prose before\n[SMS]\n- hey\n- there\nprose after';
+    const cleaned = strip(text);
+    assert.ok(!cleaned.includes('[SMS]'));
+    assert.ok(cleaned.startsWith('prose before') && cleaned.endsWith('prose after'));
+});
+
+test('strip: removes both marker AND leaked block together', () => {
+    const text = 'hi\n[SMS]\n- a\n<!--Phone:{"msgs":["b"]}-->\nend';
+    const cleaned = strip(text);
+    assert.ok(!cleaned.includes('[SMS]'), 'SMS header removed');
+    assert.ok(!cleaned.includes('<!--Phone'), 'marker removed');
+    assert.ok(cleaned.includes('hi') && cleaned.includes('end'), 'surrounding prose kept');
+});

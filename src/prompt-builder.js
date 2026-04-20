@@ -8,6 +8,18 @@ export const DEFAULT_FLOW_A_INSTRUCTIONS = `# Phone / SMS system (SillyPhone ext
 You can send the user a text message by appending ONE hidden marker at the very end of your response:
 <!--Phone:{"msgs":["text1","text2"]}-->
 
+## Output format ≠ history format
+
+The marker above is how you SEND a new message. The "[SMS]" blocks you see earlier in the chat history are how *past* SMS are DISPLAYED — they are already-delivered, not a template for you to imitate. Writing a "[SMS]" block yourself does NOT send a message; only the hidden marker does.
+
+DO (this sends a message):
+<!--Phone:{"msgs":["hey","u up"]}-->
+
+DON'T (this is just prose — no message is delivered):
+[SMS]
+- hey
+- u up
+
 You may also attach an image or video to the same marker. The attachment is described in words — the user sees a placeholder ([📷 image attachment] or [🎥 video attachment]), the description is for your context awareness only:
 <!--Phone:{"attachment":{"kind":"image","description":"a photo of {{char}} holding up a coffee mug, slightly out of focus"},"msgs":["morning"]}-->
 
