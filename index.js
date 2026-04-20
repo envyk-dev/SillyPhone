@@ -38,17 +38,19 @@ async function commitCharBurstFromMarker(hostIdx, parsedMsgs, attachment, hostRe
     const burstMsg = chatSms.buildBurstMessage({
         from: 'char', msgs: parsedMsgs, ts, charName, userName, attachment,
     });
+
+    // If the host is empty (prose stripped away, or fast-SMS mode) cut it
+    // BEFORE pushing the burst. Doing it after-push has proven racy — the
+    // blank prose row would occasionally survive the /cut. Cutting first
+    // also means the burst lands at the host's former chat index.
+    if (hostResidualText.trim() === '') {
+        await cutChatMessage(hostIdx);
+    }
+
     const burstIdx = pushChatMessage(burstMsg);
     // Apply styling immediately — MESSAGE_RENDERED may not fire for
     // programmatically-pushed messages in all ST builds.
     applySmsRowStyling(burstIdx);
-
-    if (hostResidualText.trim() === '') {
-        // Model emitted ONLY a marker — cut the now-empty host so the chat
-        // doesn't show a blank prose row above the SMS row.
-        await cutChatMessage(hostIdx);
-    }
-
     return burstIdx;
 }
 
@@ -120,11 +122,19 @@ async function handleMessageReceived(messageIdx) {
     const parsed = marker.parse(text);
     if (!parsed) return;
 
-    const stripped = cleanHostProse(text, parsed.msgs);
-    msg.mes = stripped;
-    // Re-render through ST's own formatter so markdown and linebreaks
-    // survive. Raw textContent would collapse \n to spaces and break paragraphs.
-    updateMessageDom(messageIdx, msg);
+    let stripped = cleanHostProse(text, parsed.msgs);
+    // Fast-SMS mode: discard any host prose around the marker so the row
+    // ends up empty and gets cut by the empty-host path below.
+    if (settings.get('fastSms')) stripped = '';
+
+    if (stripped !== '') {
+        msg.mes = stripped;
+        // Re-render through ST's own formatter so markdown and linebreaks
+        // survive. Raw textContent would collapse \n to spaces and break paragraphs.
+        updateMessageDom(messageIdx, msg);
+    }
+    // When stripped is '' we skip the DOM update — commitCharBurstFromMarker
+    // will cut the host outright, so there's no point rendering it first.
 
     await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
     const ts = Date.now();

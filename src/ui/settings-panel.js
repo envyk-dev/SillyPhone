@@ -45,6 +45,9 @@ function template() {
                 <label class="checkbox_label">
                     <input type="checkbox" data-sp="enabled"> Enabled
                 </label>
+                <label class="checkbox_label" title="Delete the host chat row after extracting SMS — keeps the chat log clean of prose around markers.">
+                    <input type="checkbox" data-sp="fastSms"> Fast-SMS mode (drop host prose, keep only bubbles)
+                </label>
                 <label class="checkbox_label">
                     <input type="checkbox" data-sp="showBadge"> Show floating badge
                 </label>

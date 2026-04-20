@@ -9,6 +9,7 @@ const KEY = 'sillyphone';
 
 const DEFAULTS = {
     enabled: true,
+    fastSms: false,
     showBadge: true,
     toastSound: false,
     rollingMemory: {
