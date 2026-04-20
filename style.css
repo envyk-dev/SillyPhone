@@ -187,6 +187,11 @@
     justify-content: center;
 }
 
+.sp-modal-header button[hidden] { display: none; }
+
+.sp-modal-trash { color: #ff453a; }
+.sp-modal-trash:disabled { opacity: 0.35; cursor: not-allowed; }
+
 .sp-modal-header button svg,
 .sp-input-row button svg,
 .sp-attachment-btn svg {
@@ -208,7 +213,12 @@
     display: flex;
     flex-direction: column;
     gap: 16px; /* space between turn groups */
+    transition: padding 0.15s ease;
 }
+
+/* Extra side padding in manage mode so the outside-bubble checkers (which
+   sit at calc(100% + 10px)) clear the viewport edge on narrow screens. */
+.sp-modal-messages.sp-manage-mode { padding-left: 42px; padding-right: 42px; }
 
 /* Turn container wraps all bubbles from a single speaker in a burst */
 .sp-turn {
@@ -458,41 +468,45 @@
     to   { transform: translateY(0); }
 }
 
-/* ---------- Manage mode (tap-to-delete) ---------- */
+/* ---------- Manage mode (multi-select delete) ---------- */
 .sp-manage-mode .sp-bubble {
     cursor: pointer;
     position: relative;
-    transition: transform 0.1s ease, outline 0.1s ease, box-shadow 0.1s ease;
+    transition: transform 0.1s ease;
 }
 
-.sp-manage-mode .sp-bubble::after {
-    content: "✕";
+/* Circular checker on the outer-margin side, vertically centered. */
+.sp-manage-mode .sp-bubble::before {
+    content: "";
     position: absolute;
-    top: -8px;
-    background: #ff3b30;
-    color: white;
-    width: 22px;
-    height: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    color: white;
+    font-size: 13px;
     font-weight: 700;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     line-height: 1;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.sp-manage-mode .sp-bubble-user::after { left: -8px; }
-.sp-manage-mode .sp-bubble-char::after { right: -8px; }
+.sp-manage-mode .sp-bubble-user::before { right: calc(100% + 10px); }
+.sp-manage-mode .sp-bubble-char::before { left: calc(100% + 10px); }
 
-.sp-manage-mode .sp-bubble:hover {
-    outline: 2px solid #ff3b30;
-    outline-offset: 1px;
+.sp-manage-mode .sp-bubble.sp-selected::before {
+    content: "✓";
+    background: #0a84ff;
+    border-color: #0a84ff;
 }
 
 .sp-manage-mode .sp-bubble:active {
-    transform: scale(0.96);
+    transform: scale(0.98);
 }
 
 /* Header close button while in manage mode — smaller, uppercase,
@@ -525,12 +539,6 @@
 }
 .sp-modal-header button { font-size: 20px; }
 .sp-modal-input button { font-size: 18px; }
-.sp-manage-mode .sp-bubble::after {
-    top: -4px;
-    background: #787474;
-    width: 16px;
-    height: 16px;
-}
 
 /* ---------- Input row + attachment button/chip ---------- */
 .sp-input-row {
@@ -618,20 +626,31 @@
     cursor: pointer;
     position: relative;
 }
-.sp-manage-mode .sp-attachment-placeholder::after {
-    content: "×";
+.sp-manage-mode .sp-attachment-placeholder::before {
+    content: "";
     position: absolute;
-    top: -4px;
-    right: -4px;
-    background: #787474;
-    color: white;
-    width: 16px;
-    height: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.sp-manage-mode .sp-attachment-placeholder-user::before { right: calc(100% + 10px); }
+.sp-manage-mode .sp-attachment-placeholder:not(.sp-attachment-placeholder-user)::before { left: calc(100% + 10px); }
+.sp-manage-mode .sp-attachment-placeholder.sp-selected::before {
+    content: "✓";
+    background: #0a84ff;
+    border-color: #0a84ff;
 }
 
 /* SMS rows in the MAIN SillyTavern chat log are hidden entirely.

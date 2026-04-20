@@ -14,15 +14,21 @@ let inputEl = null;
 let sendBtn = null;
 let closeBtn = null;
 let menuBtn = null;
+let trashBtn = null;
 let attachBtn = null;
 let attachmentChipEl = null;
 let onSendHandler = null;
 let charName = 'Contact';
 let manageMode = false;
 
+// Set of composite keys identifying selected items in manage mode.
+// Keys: `msg:<chatIdx>:<msgIdx>` or `att:<chatIdx>`. Cleared on enter/exit.
+const selectedIds = new Set();
+
 const SEND_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z"/><path d="M6 12h16"/></svg>';
 const PLUS_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
 const BACK_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>';
+const TRASH_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
 
 // Attachment staged for the next send. null when none. Cleared on send or
 // when the user clicks the chip's × button.
@@ -49,6 +55,7 @@ export function mount({ onSend }) {
                 <button class="sp-modal-close" aria-label="Close phone">${BACK_ICON_SVG}</button>
                 <div class="sp-modal-name"></div>
                 <button class="sp-modal-menu" aria-label="Menu">⋮</button>
+                <button class="sp-modal-trash" aria-label="Delete selected" hidden disabled>${TRASH_ICON_SVG}</button>
             </header>
             <div class="sp-modal-messages" role="log" aria-live="polite"></div>
             <form class="sp-modal-input">
@@ -68,11 +75,13 @@ export function mount({ onSend }) {
     sendBtn = modalEl.querySelector('.sp-modal-input button[type="submit"]');
     closeBtn = modalEl.querySelector('.sp-modal-close');
     menuBtn = modalEl.querySelector('.sp-modal-menu');
+    trashBtn = modalEl.querySelector('.sp-modal-trash');
     attachBtn = modalEl.querySelector('.sp-attachment-btn');
     attachmentChipEl = modalEl.querySelector('.sp-attachment-chip');
 
     closeBtn.addEventListener('click', handleCloseClick);
     menuBtn.addEventListener('click', openMenu);
+    trashBtn.addEventListener('click', handleBulkDeleteClick);
     attachBtn.addEventListener('click', openAttachmentMenu);
 
     modalEl.addEventListener('click', (e) => {
@@ -160,6 +169,7 @@ export function refresh() {
     if (!modalEl) return;
     const bursts = chatSms.listBursts(ctx().chat);
     bubbles.renderThread(bursts, messagesEl);
+    if (manageMode) reapplySelection();
 }
 
 export function appendBurst(burst) {
@@ -314,52 +324,125 @@ async function confirmClearChat() {
 
 function enterManageMode() {
     manageMode = true;
+    selectedIds.clear();
     refresh();
     messagesEl.classList.add('sp-manage-mode');
     closeBtn.textContent = 'Done';
     closeBtn.classList.add('sp-manage-done');
     closeBtn.setAttribute('aria-label', 'Done managing messages');
-    menuBtn.style.visibility = 'hidden';
+    menuBtn.hidden = true;
+    trashBtn.hidden = false;
+    updateTrashButtonState();
     sendBtn.disabled = true;
     attachBtn.disabled = true;
     inputEl.disabled = true;
-    inputEl.placeholder = 'Tap to delete';
+    inputEl.placeholder = 'Select messages to delete';
 }
 
 function exitManageMode() {
     manageMode = false;
+    selectedIds.clear();
     messagesEl.classList.remove('sp-manage-mode');
     closeBtn.innerHTML = BACK_ICON_SVG;
     closeBtn.classList.remove('sp-manage-done');
     closeBtn.setAttribute('aria-label', 'Close phone');
-    menuBtn.style.visibility = '';
+    menuBtn.hidden = false;
+    trashBtn.hidden = true;
     sendBtn.disabled = false;
     attachBtn.disabled = false;
     inputEl.disabled = false;
     inputEl.placeholder = 'Type a mesage... (line = bubble)';
 }
 
-async function handleMessagesClick(e) {
+// Toggle selection: clicks in manage mode mark items for bulk delete instead
+// of deleting them one by one.
+function handleMessagesClick(e) {
     if (!manageMode) return;
     const target = e.target.closest('.sp-bubble, .sp-attachment-placeholder');
     if (!target) return;
     const chatIdx = Number(target.dataset.entryIdx);
     if (!Number.isInteger(chatIdx)) return;
-    const chatMsg = ctx().chat?.[chatIdx];
-    if (!chatMsg) return;
 
-    if (target.classList.contains('sp-attachment-placeholder')) {
-        if (!confirm('Delete this attachment? This cannot be undone.')) return;
-        const r = deleteAttachmentFromBurst(chatMsg);
-        if (r.action === 'update') replaceChatMessage(chatIdx, r.msg);
-        else if (r.action === 'remove') await cutChatMessage(chatIdx);
+    const key = target.classList.contains('sp-attachment-placeholder')
+        ? `att:${chatIdx}`
+        : `msg:${chatIdx}:${Number(target.dataset.msgIdx)}`;
+
+    if (selectedIds.has(key)) {
+        selectedIds.delete(key);
+        target.classList.remove('sp-selected');
     } else {
-        const msgIdx = Number(target.dataset.msgIdx);
-        if (!Number.isInteger(msgIdx)) return;
-        if (!confirm('Delete this message? This cannot be undone.')) return;
-        const r = deleteMessageFromBurst(chatMsg, msgIdx);
-        if (r.action === 'update') replaceChatMessage(chatIdx, r.msg);
-        else if (r.action === 'remove') await cutChatMessage(chatIdx);
+        selectedIds.add(key);
+        target.classList.add('sp-selected');
     }
+    updateTrashButtonState();
+}
+
+function updateTrashButtonState() {
+    if (!trashBtn) return;
+    trashBtn.disabled = selectedIds.size === 0;
+}
+
+// After a thread re-render, the DOM loses the sp-selected class. Reapply it
+// from our Set so selection survives incoming bursts while in manage mode.
+function reapplySelection() {
+    if (!messagesEl) return;
+    for (const key of selectedIds) {
+        const [kind, chatIdx, msgIdx] = key.split(':');
+        const sel = kind === 'att'
+            ? `.sp-attachment-placeholder[data-entry-idx="${chatIdx}"]`
+            : `.sp-bubble[data-entry-idx="${chatIdx}"][data-msg-idx="${msgIdx}"]`;
+        const el = messagesEl.querySelector(sel);
+        if (el) el.classList.add('sp-selected');
+    }
+}
+
+async function handleBulkDeleteClick() {
+    if (!manageMode || selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    if (!confirm(`Delete ${count} item${count === 1 ? '' : 's'}? This cannot be undone.`)) return;
+
+    // Group selection by chatIdx so we can apply all deletions within a burst
+    // sequentially to a single rolling chatMsg copy.
+    const byChatIdx = new Map();
+    for (const key of selectedIds) {
+        const [kind, chatIdxStr, msgIdxStr] = key.split(':');
+        const chatIdx = Number(chatIdxStr);
+        if (!byChatIdx.has(chatIdx)) byChatIdx.set(chatIdx, { msgIdxs: [], attachment: false });
+        const entry = byChatIdx.get(chatIdx);
+        if (kind === 'att') entry.attachment = true;
+        else entry.msgIdxs.push(Number(msgIdxStr));
+    }
+
+    // Descending chatIdx first so later deletions don't shift earlier indices.
+    const chatIdxs = Array.from(byChatIdx.keys()).sort((a, b) => b - a);
+    for (const chatIdx of chatIdxs) {
+        const { msgIdxs, attachment } = byChatIdx.get(chatIdx);
+        let current = ctx().chat?.[chatIdx];
+        if (!current) continue;
+
+        let removed = false;
+        // Bubbles first, descending msgIdx so splice indices stay valid.
+        msgIdxs.sort((a, b) => b - a);
+        for (const mi of msgIdxs) {
+            const r = deleteMessageFromBurst(current, mi);
+            if (r.action === 'remove') { removed = true; break; }
+            if (r.action === 'update') current = r.msg;
+        }
+        if (!removed && attachment) {
+            const r = deleteAttachmentFromBurst(current);
+            if (r.action === 'remove') removed = true;
+            else if (r.action === 'update') current = r.msg;
+        }
+
+        if (removed) {
+            // eslint-disable-next-line no-await-in-loop
+            await cutChatMessage(chatIdx);
+        } else {
+            replaceChatMessage(chatIdx, current);
+        }
+    }
+
+    selectedIds.clear();
+    exitManageMode();
     refresh();
 }
