@@ -9,7 +9,7 @@ const KEY = 'sillyphone';
 
 const DEFAULTS = {
     enabled: true,
-    fastSms: false,
+    smsOnly: false,
     showBadge: true,
     toastSound: false,
     rollingMemory: {
@@ -109,6 +109,11 @@ function ensureInitialized() {
     // OLD_FLOW_A_FINGERPRINTS above.
     if (isLikelyStaleDefaultFlowA(s.flowAInstructions)) {
         s.flowAInstructions = DEFAULTS.flowAInstructions;
+    }
+    // Rename: fastSms → smsOnly (only lived on dev, but a few testers flipped it).
+    if (s.fastSms !== undefined) {
+        if (s.smsOnly === undefined) s.smsOnly = s.fastSms;
+        delete s.fastSms;
     }
     persist();
 }

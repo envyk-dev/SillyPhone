@@ -123,9 +123,9 @@ async function handleMessageReceived(messageIdx) {
     if (!parsed) return;
 
     let stripped = cleanHostProse(text, parsed.msgs);
-    // Fast-SMS mode: discard any host prose around the marker so the row
+    // SMS-only mode: discard any host prose around the marker so the row
     // ends up empty and gets cut by the empty-host path below.
-    if (settings.get('fastSms')) stripped = '';
+    if (settings.get('smsOnly')) stripped = '';
 
     if (stripped !== '') {
         msg.mes = stripped;
