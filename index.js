@@ -184,13 +184,15 @@ function handleMessageRendered(messageIdx) {
 // its `mes` back into `extra.sillyphone` so the phone modal stays in sync.
 // Non-SMS edits are a no-op (guard on the tag).
 async function handleMessageEdited(messageIdx) {
+    console.debug('[SillyPhone] edit event fired', messageIdx);
+    const idx = Number(messageIdx);
     const chat = ctx().chat;
-    if (messageIdx == null || !Array.isArray(chat) || !chat[messageIdx]) return;
-    const msg = chat[messageIdx];
+    if (!Number.isInteger(idx) || !Array.isArray(chat) || !chat[idx]) return;
+    const msg = chat[idx];
     if (!msg.extra?.sillyphone) return;
     const r = chatSms.rebuildBurstFromMes(msg);
-    if (r.action === 'update') replaceChatMessage(messageIdx, r.msg);
-    else if (r.action === 'remove') await cutChatMessage(messageIdx);
+    if (r.action === 'update') replaceChatMessage(idx, r.msg);
+    else if (r.action === 'remove') await cutChatMessage(idx);
     modal.refresh();
     badge.refresh();
 }
@@ -243,10 +245,16 @@ function init() {
         c.eventSource.on(c.eventTypes.MESSAGE_SENT, handleMessageSent);
         c.eventSource.on(c.eventTypes.CHAT_CHANGED, handleChatChanged);
         c.eventSource.on(c.eventTypes.MESSAGE_RENDERED, handleMessageRendered);
-        // Subscribe to whichever edit event this ST build exposes. Both are
-        // guarded-idempotent, so dual fires are harmless.
-        if (c.eventTypes.MESSAGE_UPDATED) c.eventSource.on(c.eventTypes.MESSAGE_UPDATED, handleMessageEdited);
-        if (c.eventTypes.MESSAGE_EDITED) c.eventSource.on(c.eventTypes.MESSAGE_EDITED, handleMessageEdited);
+        // Subscribe to every event whose name hints at message edit/update.
+        // Different ST builds expose different subsets; idempotent handler
+        // makes dual fires harmless. Logs each subscription for diagnostic.
+        const editEventNames = Object.keys(c.eventTypes).filter(k =>
+            /MESSAGE_(UPDATED|EDITED|SAVED|CHANGED)/.test(k),
+        );
+        for (const name of editEventNames) {
+            c.eventSource.on(c.eventTypes[name], handleMessageEdited);
+        }
+        console.debug('[SillyPhone] subscribed to edit events:', editEventNames);
 
         context.updateAll();
         console.log('[SillyPhone] loaded v0.4.0');
