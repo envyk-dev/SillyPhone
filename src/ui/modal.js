@@ -20,6 +20,10 @@ let onSendHandler = null;
 let charName = 'Contact';
 let manageMode = false;
 
+const SEND_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z"/><path d="M6 12h16"/></svg>';
+const PLUS_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
+const BACK_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>';
+
 // Attachment staged for the next send. null when none. Cleared on send or
 // when the user clicks the chip's × button.
 let stagedAttachment = null;
@@ -42,7 +46,7 @@ export function mount({ onSend }) {
     modalEl.innerHTML = `
         <div class="sp-modal-inner">
             <header class="sp-modal-header">
-                <button class="sp-modal-close" aria-label="Close phone">←</button>
+                <button class="sp-modal-close" aria-label="Close phone">${BACK_ICON_SVG}</button>
                 <div class="sp-modal-name"></div>
                 <button class="sp-modal-menu" aria-label="Menu">⋮</button>
             </header>
@@ -50,9 +54,9 @@ export function mount({ onSend }) {
             <form class="sp-modal-input">
                 <div class="sp-attachment-chip" hidden></div>
                 <div class="sp-input-row">
-                    <button type="button" class="sp-attachment-btn" aria-label="Add attachment">+</button>
+                    <button type="button" class="sp-attachment-btn" aria-label="Add attachment">${PLUS_ICON_SVG}</button>
                     <textarea placeholder="Type a mesage... (line = bubble)" rows="1" aria-label="Message input"></textarea>
-                    <button type="submit" aria-label="Send">➤</button>
+                    <button type="submit" aria-label="Send">${SEND_ICON_SVG}</button>
                 </div>
             </form>
         </div>
@@ -321,7 +325,7 @@ function enterManageMode() {
 function exitManageMode() {
     manageMode = false;
     messagesEl.classList.remove('sp-manage-mode');
-    closeBtn.textContent = '←';
+    closeBtn.innerHTML = BACK_ICON_SVG;
     closeBtn.classList.remove('sp-manage-done');
     closeBtn.setAttribute('aria-label', 'Close phone');
     menuBtn.style.visibility = '';
