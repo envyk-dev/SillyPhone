@@ -648,10 +648,12 @@
     border-color: #0a84ff;
 }
 
-/* SMS rows in the MAIN SillyTavern chat log are hidden entirely.
-   The content stays in chat[i].mes so the LLM reads it in prompt context;
-   users manage SMS via the phone modal instead of the main chat.
+/* SMS rows in the MAIN SillyTavern chat log are hidden by default — users
+   manage SMS via the phone modal instead of the main chat. The content
+   still lives in chat[i].mes so the LLM reads it in prompt context.
+   Toggle the `sp-show-sms-rows` body class (via the settings panel) to
+   reveal them for manual editing.
    !important required because ST's own .mes rules beat ours without it. */
-.mes.sp-chat-sms {
+body:not(.sp-show-sms-rows) .mes.sp-chat-sms {
     display: none !important;
 }

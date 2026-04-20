@@ -11,6 +11,7 @@ const DEFAULTS = {
     enabled: true,
     smsOnly: false,
     showBadge: true,
+    showSmsRows: false,
     toastSound: false,
     rollingMemory: {
         enabled: false,

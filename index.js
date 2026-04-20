@@ -220,6 +220,7 @@ function init() {
         modal.setCharInfo(currentCharName());
         badge.mount(openPhone);
         settingsPanel.mount();
+        settingsPanel.applySmsRowVisibility();
 
         c.eventSource.on(c.eventTypes.MESSAGE_RECEIVED, handleMessageReceived);
         c.eventSource.on(c.eventTypes.MESSAGE_SENT, handleMessageSent);

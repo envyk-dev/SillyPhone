@@ -9,6 +9,13 @@ import { ctx, cutChatMessage } from '../st.js';
 
 const MOUNT_SELECTORS = ['#extensions_settings2', '#extensions_settings'];
 
+// Reflect the showSmsRows setting onto <body>. The CSS rule that hides
+// .mes.sp-chat-sms is scoped to body:not(.sp-show-sms-rows), so adding the
+// class reveals the hidden SMS rows for manual editing.
+export function applySmsRowVisibility() {
+    document.body.classList.toggle('sp-show-sms-rows', !!settings.get('showSmsRows'));
+}
+
 function findMount() {
     for (const sel of MOUNT_SELECTORS) {
         const el = document.querySelector(sel);
@@ -50,6 +57,9 @@ function template() {
                 </label>
                 <label class="checkbox_label">
                     <input type="checkbox" data-sp="showBadge"> Show floating badge
+                </label>
+                <label class="checkbox_label" title="Reveal the hidden [SMS] rows in the main chat log so you can edit or delete them manually.">
+                    <input type="checkbox" data-sp="showSmsRows"> Show [SMS] rows in main chat log
                 </label>
                 <label class="checkbox_label">
                     <input type="checkbox" data-sp="toastSound"> Toast sound
@@ -106,6 +116,7 @@ function wire(panel) {
         else settings.setNested(path[0], path[1], val);
         badge.refresh();
         context.updateAll();
+        applySmsRowVisibility();
     });
 
     panel.querySelector('[data-sp-action="clearThread"]').addEventListener('click', async () => {
