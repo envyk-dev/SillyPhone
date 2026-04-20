@@ -10,6 +10,7 @@ import * as badge from './src/ui/badge.js';
 import * as toast from './src/ui/toast.js';
 import * as modal from './src/ui/modal.js';
 import * as settingsPanel from './src/ui/settings-panel.js';
+import * as extensionsMenu from './src/ui/extensions-menu.js';
 
 let lastParsedKey = null;
 
@@ -179,6 +180,21 @@ function handleMessageRendered(messageIdx) {
     applySmsRowStyling(messageIdx);
 }
 
+// When the user edits an SMS row directly in the main chat log, re-parse
+// its `mes` back into `extra.sillyphone` so the phone modal stays in sync.
+// Non-SMS edits are a no-op (guard on the tag).
+async function handleMessageEdited(messageIdx) {
+    const chat = ctx().chat;
+    if (messageIdx == null || !Array.isArray(chat) || !chat[messageIdx]) return;
+    const msg = chat[messageIdx];
+    if (!msg.extra?.sillyphone) return;
+    const r = chatSms.rebuildBurstFromMes(msg);
+    if (r.action === 'update') replaceChatMessage(messageIdx, r.msg);
+    else if (r.action === 'remove') await cutChatMessage(messageIdx);
+    modal.refresh();
+    badge.refresh();
+}
+
 async function handleSend(payload) {
     const rawText = payload?.text || '';
     const attachment = payload?.attachment || null;
@@ -221,11 +237,16 @@ function init() {
         badge.mount(openPhone);
         settingsPanel.mount();
         settingsPanel.applySmsRowVisibility();
+        extensionsMenu.mount();
 
         c.eventSource.on(c.eventTypes.MESSAGE_RECEIVED, handleMessageReceived);
         c.eventSource.on(c.eventTypes.MESSAGE_SENT, handleMessageSent);
         c.eventSource.on(c.eventTypes.CHAT_CHANGED, handleChatChanged);
         c.eventSource.on(c.eventTypes.MESSAGE_RENDERED, handleMessageRendered);
+        // Subscribe to whichever edit event this ST build exposes. Both are
+        // guarded-idempotent, so dual fires are harmless.
+        if (c.eventTypes.MESSAGE_UPDATED) c.eventSource.on(c.eventTypes.MESSAGE_UPDATED, handleMessageEdited);
+        if (c.eventTypes.MESSAGE_EDITED) c.eventSource.on(c.eventTypes.MESSAGE_EDITED, handleMessageEdited);
 
         context.updateAll();
         console.log('[SillyPhone] loaded v0.4.0');

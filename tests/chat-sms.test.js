@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { listBursts, formatBurstMes, buildBurstMessage, deleteMessageFromBurst, deleteAttachmentFromBurst } from '../src/chat-sms.js';
+import { listBursts, formatBurstMes, buildBurstMessage, deleteMessageFromBurst, deleteAttachmentFromBurst, parseBurstMes, rebuildBurstFromMes } from '../src/chat-sms.js';
 
 test('listBursts: returns chat messages tagged with sillyphone, with chatIdx', () => {
     const chat = [
@@ -220,4 +220,62 @@ test('deleteAttachmentFromBurst: no attachment → action=noop', () => {
 
 test('deleteAttachmentFromBurst: not tagged → action=noop', () => {
     assert.equal(deleteAttachmentFromBurst({ extra: {} }).action, 'noop');
+});
+
+test('parseBurstMes: standard format with header and bullets', () => {
+    assert.deepEqual(parseBurstMes('[SMS]\n- hello\n- world'), { msgs: ['hello', 'world'] });
+});
+
+test('parseBurstMes: attachment line parsed into attachment object', () => {
+    assert.deepEqual(parseBurstMes('[SMS]\n[image: a sunset]\n- look at this'), {
+        msgs: ['look at this'],
+        attachment: { kind: 'image', description: 'a sunset', image: null },
+    });
+});
+
+test('parseBurstMes: lines without "- " prefix still accepted as bubbles', () => {
+    assert.deepEqual(parseBurstMes('[SMS]\nhello\nworld'), { msgs: ['hello', 'world'] });
+});
+
+test('parseBurstMes: blank lines ignored', () => {
+    assert.deepEqual(parseBurstMes('[SMS]\n\n- hi\n\n- yo\n'), { msgs: ['hi', 'yo'] });
+});
+
+test('parseBurstMes: empty/non-string input', () => {
+    assert.deepEqual(parseBurstMes(''), { msgs: [] });
+    assert.deepEqual(parseBurstMes(null), { msgs: [] });
+});
+
+test('rebuildBurstFromMes: user edit shrinks bubble list', () => {
+    const chatMsg = {
+        mes: '[SMS]\n- hello',
+        extra: { sillyphone: { from: 'char', msgs: ['hello', 'extra'], ts: 42 } },
+    };
+    const r = rebuildBurstFromMes(chatMsg);
+    assert.equal(r.action, 'update');
+    assert.deepEqual(r.msg.extra.sillyphone.msgs, ['hello']);
+    assert.equal(r.msg.extra.sillyphone.ts, 42);
+    assert.equal(r.msg.extra.sillyphone.from, 'char');
+});
+
+test('rebuildBurstFromMes: emptied mes → action=remove', () => {
+    const chatMsg = {
+        mes: '[SMS]',
+        extra: { sillyphone: { from: 'char', msgs: ['hi'], ts: 10 } },
+    };
+    assert.equal(rebuildBurstFromMes(chatMsg).action, 'remove');
+});
+
+test('rebuildBurstFromMes: non-tagged chat message → action=noop', () => {
+    assert.equal(rebuildBurstFromMes({ mes: 'prose', extra: {} }).action, 'noop');
+});
+
+test('rebuildBurstFromMes: reformats mes so displayed text is canonical', () => {
+    const chatMsg = {
+        mes: '[SMS]\nhello\nworld',
+        extra: { sillyphone: { from: 'user', msgs: [], ts: 7 } },
+    };
+    const r = rebuildBurstFromMes(chatMsg);
+    assert.equal(r.action, 'update');
+    assert.equal(r.msg.mes, '[SMS]\n- hello\n- world');
 });

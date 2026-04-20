@@ -66,6 +66,47 @@ function normalizeAttachment(a) {
     return { kind, description, image: null };
 }
 
+// Reverse formatBurstMes: parse the displayed [SMS] text back into
+// { msgs, attachment? }. Used when the user edits an SMS row directly in
+// the main chat log so we can re-sync extra.sillyphone.
+export function parseBurstMes(text) {
+    const out = { msgs: [] };
+    if (typeof text !== 'string') return out;
+    for (const raw of text.split('\n')) {
+        const line = raw.trim();
+        if (!line || line === '[SMS]') continue;
+        const attMatch = /^\[(image|video):\s*([\s\S]+)\]$/.exec(line);
+        if (attMatch) {
+            out.attachment = { kind: attMatch[1], description: attMatch[2].trim(), image: null };
+            continue;
+        }
+        out.msgs.push(line.startsWith('- ') ? line.slice(2) : line);
+    }
+    return out;
+}
+
+// Given a chat message whose `mes` has been edited externally (e.g. by the
+// user via ST's built-in message edit), return a rebuilt tag reflecting the
+// new text. Same action contract as deleteMessageFromBurst.
+export function rebuildBurstFromMes(chatMsg) {
+    const tag = chatMsg?.extra?.sillyphone;
+    if (!tag) return { action: 'noop' };
+    const { msgs, attachment } = parseBurstMes(chatMsg.mes || '');
+    if (msgs.length === 0 && !attachment) return { action: 'remove' };
+    const nextTag = {
+        from: tag.from,
+        ts: tag.ts,
+        msgs,
+        ...(attachment ? { attachment } : {}),
+    };
+    const updated = {
+        ...chatMsg,
+        mes: formatBurstMes(msgs, attachment || null),
+        extra: { ...chatMsg.extra, sillyphone: nextTag },
+    };
+    return { action: 'update', msg: updated };
+}
+
 // Remove one msg from a tagged chat message. Returns a directive:
 // { action: 'update', msg } → replace chat[i] with msg
 // { action: 'remove' }       → cut chat[i] entirely (burst is empty)

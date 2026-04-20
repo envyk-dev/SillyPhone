@@ -657,3 +657,9 @@
 body:not(.sp-show-sms-rows) .mes.sp-chat-sms {
     display: none !important;
 }
+
+/* Active-state tint for the wand-menu toggle so the on/off state reads at a
+   glance even without the icon swap. */
+#sillyphone-show-sms-rows.sp-menu-active .sp-menu-icon {
+    color: #0a84ff;
+}

@@ -58,9 +58,6 @@ function template() {
                 <label class="checkbox_label">
                     <input type="checkbox" data-sp="showBadge"> Show floating badge
                 </label>
-                <label class="checkbox_label" title="Reveal the hidden [SMS] rows in the main chat log so you can edit or delete them manually.">
-                    <input type="checkbox" data-sp="showSmsRows"> Show [SMS] rows in main chat log
-                </label>
                 <label class="checkbox_label">
                     <input type="checkbox" data-sp="toastSound"> Toast sound
                 </label>
