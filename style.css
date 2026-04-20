@@ -213,12 +213,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px; /* space between turn groups */
-    transition: padding 0.15s ease;
 }
-
-/* Extra side padding in manage mode so the outside-bubble checkers (which
-   sit at calc(100% + 10px)) clear the viewport edge on narrow screens. */
-.sp-modal-messages.sp-manage-mode { padding-left: 42px; padding-right: 42px; }
 
 /* Turn container wraps all bubbles from a single speaker in a burst */
 .sp-turn {
