@@ -196,7 +196,7 @@
 .sp-modal-name {
     flex: 1;
     font-weight: 600;
-    font-size: 22px;
+    font-size: 18px;
     text-align: center;
 }
 
@@ -429,7 +429,12 @@
     font-size: 17px;
     width: 20px;
     text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.sp-sheet-icon svg { display: block; }
 
 .sp-sheet-destructive { color: #ff453a; }
 .sp-sheet-destructive .sp-sheet-icon { color: #ff453a; }
