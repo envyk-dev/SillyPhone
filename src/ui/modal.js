@@ -131,10 +131,6 @@ export function open() {
     modalEl.style.display = 'flex';
     storage.clearUnread();
     refresh();
-    // Double-rAF so scroll runs AFTER the just-shown flex container has
-    // laid out; a single rAF inside renderThread can fire too early when
-    // the modal was display:none moments ago.
-    scrollToBottom();
     setTimeout(() => inputEl?.focus(), 50);
 }
 
