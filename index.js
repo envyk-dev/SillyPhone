@@ -1,5 +1,5 @@
 // SillyPhone entry point — wires events, UI, and generation flows.
-import { ctx, pushChatMessage, cutChatMessage, runSlashCommand, updateMessageDom } from './src/st.js';
+import { ctx, pushChatMessage, cutChatMessage, runSlashCommand, updateMessageDom, replaceChatMessage } from './src/st.js';
 import * as settings from './src/settings.js';
 import * as storage from './src/storage.js';
 import * as context from './src/context.js';
