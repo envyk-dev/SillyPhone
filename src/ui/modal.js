@@ -88,7 +88,11 @@ export function mount({ onSend }) {
     });
 
     inputEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        // On touch devices there's no Shift key — Enter always inserts a
+        // newline, send button is the only submit. Desktop keeps Enter=send,
+        // Shift+Enter=newline.
+        const isTouch = window.matchMedia('(pointer: coarse)').matches;
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !isTouch) {
             e.preventDefault();
             submitInput();
         }
