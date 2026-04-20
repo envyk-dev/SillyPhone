@@ -74,11 +74,15 @@ Image uploads are not implemented yet. The data model reserves `attachment.image
 
 Enable in Settings → SillyPhone to auto-summarize older main-chat messages and `/hide` them from the prompt. Triggers on `MESSAGE_RECEIVED` / `MESSAGE_SENT` when chat length crosses the configured threshold. Opt-in only — SillyTavern's own Summarize extension may conflict; pick one.
 
+## SMS-only mode (optional)
+
+By default, anything the character writes around a `<!--Phone:...-->` marker (scene prose, narration, etc.) survives in the main chat alongside the extracted SMS row. Toggle **SMS-only mode** in Settings to drop that prose: after marker extraction, the host row is cut entirely, leaving just the SMS bubble in the chat log. Useful for pure-texting RP where the main chat is the phone conversation and there's no scene to preserve. Empty host rows (e.g. when the model emits only a marker) are always cut, regardless of this setting.
+
 ## Settings
 
 Open Extensions drawer → **SillyPhone** panel:
 
-- Enabled / Show badge / Toast sound
+- Enabled / SMS-only mode / Show badge / Toast sound
 - Rolling memory toggle + thresholds + custom summarization prompt
 - Editable Flow A instructions
 - Clear phone thread / Clear all phone data for current chat
