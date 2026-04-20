@@ -131,6 +131,10 @@ export function open() {
     modalEl.style.display = 'flex';
     storage.clearUnread();
     refresh();
+    // Double-rAF so scroll runs AFTER the just-shown flex container has
+    // laid out; a single rAF inside renderThread can fire too early when
+    // the modal was display:none moments ago.
+    scrollToBottom();
     setTimeout(() => inputEl?.focus(), 50);
 }
 
@@ -192,6 +196,9 @@ export async function playCharBurst(msgs, ts, attachment, timing) {
         refresh();
         return;
     }
+    // Snap to bottom before the sequenced reveal starts so the user never
+    // misses the first typing dots / bubble.
+    scrollToBottom();
     await playBubbles(msgs, messagesEl, 'char', ts, attachment ?? null, timing ?? null);
 }
 
