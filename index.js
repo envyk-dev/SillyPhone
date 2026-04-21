@@ -230,11 +230,38 @@ async function handleSend(payload) {
     }
 }
 
+async function handleReroll() {
+    const chat = ctx().chat;
+    const lastIdx = chatSms.findLastCharBurstForReroll(chat);
+    if (lastIdx < 0) return;
+
+    modal.setRerollInFlight(true);
+    modal.setSendDisabled(true);
+    try {
+        await cutChatMessage(lastIdx);
+        modal.refresh();
+        modal.showTyping();
+        context.setSmsMode(true);
+        try {
+            await runSlashCommand('/trigger');
+        } catch (err) {
+            console.error('[SillyPhone] reroll /trigger failed', err);
+            modal.appendBurst({ from: 'char', msgs: ['(reroll failed)'], ts: Date.now() });
+        } finally {
+            context.setSmsMode(false);
+            modal.hideTyping();
+        }
+    } finally {
+        modal.setSendDisabled(false);
+        modal.setRerollInFlight(false);
+    }
+}
+
 function init() {
     try {
         const c = ctx();
         settings.init();
-        modal.mount({ onSend: handleSend });
+        modal.mount({ onSend: handleSend, onReroll: handleReroll });
         modal.setCharInfo(currentCharName());
         badge.mount(openPhone);
         settingsPanel.mount();

@@ -18,8 +18,10 @@ let trashBtn = null;
 let attachBtn = null;
 let attachmentChipEl = null;
 let onSendHandler = null;
+let onRerollHandler = null;
 let charName = 'Contact';
 let manageMode = false;
+let rerollInFlight = false;
 
 // Set of composite keys identifying selected items in manage mode.
 // Keys: `msg:<chatIdx>:<msgIdx>` or `att:<chatIdx>`. Cleared on enter/exit.
@@ -40,8 +42,9 @@ function escapeHtml(s) {
     }[c]));
 }
 
-export function mount({ onSend }) {
+export function mount({ onSend, onReroll }) {
     onSendHandler = onSend;
+    onRerollHandler = onReroll;
     if (modalEl) return;
 
     modalEl = document.createElement('div');
@@ -170,6 +173,7 @@ export function refresh() {
     const bursts = chatSms.listBursts(ctx().chat);
     bubbles.renderThread(bursts, messagesEl);
     if (manageMode) reapplySelection();
+    reconcileRerollIcon();
 }
 
 export function appendBurst(burst) {
@@ -178,21 +182,47 @@ export function appendBurst(burst) {
         refresh();
     } else {
         bubbles.appendBurst(burst, messagesEl);
+        reconcileRerollIcon();
     }
+}
+
+function reconcileRerollIcon() {
+    if (!messagesEl) return;
+    const enabled = !manageMode
+        && !rerollInFlight
+        && typeof onRerollHandler === 'function'
+        && !sendBtn?.disabled;
+    bubbles.reconcileReroll(messagesEl, handleRerollClick, enabled);
+}
+
+function handleRerollClick() {
+    if (rerollInFlight) return;
+    if (typeof onRerollHandler !== 'function') return;
+    onRerollHandler();
+}
+
+// Called by index.js around the reroll lifecycle so the icon hides and
+// the send/attach controls mirror a normal in-flight send.
+export function setRerollInFlight(on) {
+    rerollInFlight = !!on;
+    reconcileRerollIcon();
 }
 
 export function showTyping() {
     if (!modalEl || !isOpen() || manageMode) return;
     bubbles.showTyping(messagesEl);
+    reconcileRerollIcon();
 }
 
 export function hideTyping() {
     if (!modalEl) return;
     bubbles.hideTyping(messagesEl);
+    reconcileRerollIcon();
 }
 
 export function setSendDisabled(disabled) {
     if (sendBtn) sendBtn.disabled = disabled;
+    reconcileRerollIcon();
 }
 
 // Force scroll to bottom, bypassing the "only if near bottom" heuristic.
@@ -214,6 +244,7 @@ export async function playCharBurst(msgs, ts, attachment, timing) {
     // misses the first typing dots / bubble.
     scrollToBottom();
     await playBubbles(msgs, messagesEl, 'char', ts, attachment ?? null, timing ?? null);
+    reconcileRerollIcon();
 }
 
 // ---------- Attachment staging ----------
@@ -352,6 +383,7 @@ function exitManageMode() {
     attachBtn.disabled = false;
     inputEl.disabled = false;
     inputEl.placeholder = 'Type a mesage... (line = bubble)';
+    reconcileRerollIcon();
 }
 
 // Toggle selection: clicks in manage mode mark items for bulk delete instead

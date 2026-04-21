@@ -14,6 +14,16 @@ export function listBursts(chat) {
     return out;
 }
 
+// Returns the chat index of the last SMS burst IF it's a char burst AND is
+// the final burst in the thread. Used by the phone modal to decide whether
+// a reroll icon should be offered. Returns -1 otherwise.
+export function findLastCharBurstForReroll(chat) {
+    const bursts = listBursts(chat);
+    if (bursts.length === 0) return -1;
+    const last = bursts[bursts.length - 1];
+    return last.from === 'char' ? last.chatIdx : -1;
+}
+
 // Plaintext transcript used as chat message `mes`. The LLM reads this form.
 // The [SMS] prefix plus bullet list reads unambiguously as a text-message
 // exchange rather than dialogue prose. Attachment lines like `[image: ...]`

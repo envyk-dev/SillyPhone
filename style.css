@@ -663,3 +663,26 @@ body:not(.sp-show-sms-rows) .mes.sp-chat-sms {
 #sillyphone-show-sms-rows.sp-menu-active .sp-menu-icon {
     color: #0a84ff;
 }
+
+/* ---------- Reroll icon (appended to last char turn) ---------- */
+.sp-reroll {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 4px 6px;
+    background: transparent;
+    border: none;
+    color: #8e8e93;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sp-reroll:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+.sp-reroll:active { transform: scale(0.92); }
+.sp-reroll svg { display: block; }
+
+/* In manage mode the reroll icon would be decorative dead weight; hide it. */
+.sp-manage-mode .sp-reroll { display: none; }
