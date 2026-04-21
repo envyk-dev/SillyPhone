@@ -105,6 +105,22 @@ function restyleAllSmsRows() {
 }
 
 async function handleMessageReceived(messageIdx) {
+    // TEMP DIAG — remove once the hidden-but-unextracted bug is root-caused.
+    const _dbgChat = ctx().chat;
+    const _dbgMsg = _dbgChat?.[messageIdx];
+    console.debug('[SillyPhone/dbg] MESSAGE_RECEIVED', {
+        messageIdx,
+        enabled: settings.get('enabled'),
+        has_msg: !!_dbgMsg,
+        is_user: _dbgMsg?.is_user,
+        already_tagged: !!_dbgMsg?.extra?.sillyphone,
+        swipe_id: _dbgMsg?.swipe_id,
+        swipes_n: _dbgMsg?.swipes?.length,
+        lastParsedKey,
+        will_key: _dbgMsg ? `${messageIdx}:${_dbgMsg.swipe_id ?? 0}` : null,
+        mes_has_marker: typeof _dbgMsg?.mes === 'string' && /<!--Phone:/.test(_dbgMsg.mes),
+    });
+
     if (!settings.get('enabled')) return;
     memory.checkRollingTrigger();
 
@@ -116,12 +132,19 @@ async function handleMessageReceived(messageIdx) {
 
     const swipeId = msg.swipe_id ?? 0;
     const key = `${messageIdx}:${swipeId}`;
-    if (key === lastParsedKey) return;
+    if (key === lastParsedKey) {
+        console.debug('[SillyPhone/dbg] bailed: dedup', { key, lastParsedKey });
+        return;
+    }
     lastParsedKey = key;
 
     const text = msg.mes || '';
     const parsed = marker.parse(text);
-    if (!parsed) return;
+    if (!parsed) {
+        console.debug('[SillyPhone/dbg] bailed: parse returned null', { mes_preview: text.slice(0, 200) });
+        return;
+    }
+    console.debug('[SillyPhone/dbg] parsed OK', { msgs_n: parsed.msgs?.length, has_attachment: !!parsed.attachment, has_timing: !!parsed.timing });
 
     let stripped = cleanHostProse(text, parsed.msgs);
     // SMS-only mode: discard any host prose around the marker so the row
