@@ -105,45 +105,39 @@ function restyleAllSmsRows() {
 }
 
 async function handleMessageReceived(messageIdx) {
-    console.debug('[SP/dbg] enter', { messageIdx });
-    if (!settings.get('enabled')) { console.debug('[SP/dbg] bail: disabled'); return; }
+    if (!settings.get('enabled')) return;
     memory.checkRollingTrigger();
 
     const chat = ctx().chat;
-    if (messageIdx == null || !Array.isArray(chat) || !chat[messageIdx]) {
-        console.debug('[SP/dbg] bail: bad idx/chat', { messageIdx, chat_len: chat?.length });
-        return;
-    }
+    if (messageIdx == null || !Array.isArray(chat) || !chat[messageIdx]) return;
     const msg = chat[messageIdx];
-    if (msg.is_user) { console.debug('[SP/dbg] bail: is_user'); return; }
-    if (msg.extra?.sillyphone) { console.debug('[SP/dbg] bail: already tagged'); return; }
+    if (msg.is_user) return;
+    if (msg.extra?.sillyphone) return;
 
     const swipeId = msg.swipe_id ?? 0;
-    const key = `${messageIdx}:${swipeId}`;
-    if (key === lastParsedKey) { console.debug('[SP/dbg] bail: dedup', { key, lastParsedKey }); return; }
-
     const text = msg.mes || '';
+    // Dedup on idx + swipe + content fingerprint. Position alone isn't enough:
+    // after a reroll (cut burst + /trigger), a brand-new generation lands at
+    // the same idx:swipe as the previous one and would be falsely dropped as
+    // a duplicate. Fingerprint = length + first 64 chars is plenty to
+    // disambiguate distinct generations while still catching genuine double-
+    // fires (tool calls, continue/append) whose content is identical.
+    const key = `${messageIdx}:${swipeId}:${text.length}:${text.slice(0, 64)}`;
+    if (key === lastParsedKey) return;
+
     const parsed = marker.parse(text);
     // Don't claim the dedup key until parse succeeds. ST double-fires
-    // MESSAGE_RECEIVED on some paths (tool calls, continue/append); the
-    // first fire can land with an empty or partial mes. Locking the key
-    // here would cause the real second fire — the one carrying the
-    // marker — to hit dedup and get dropped.
-    if (!parsed) {
-        console.debug('[SP/dbg] bail: parse null', {
-            key, mes_len: text.length, mes_has_marker: /<!--Phone:/.test(text),
-            mes_preview: text.slice(0, 150),
-        });
-        return;
-    }
+    // MESSAGE_RECEIVED on some paths and the first fire can land with an
+    // empty or partial mes. Locking the key here would cause the real
+    // second fire — the one carrying the marker — to hit dedup and get
+    // dropped.
+    if (!parsed) return;
     lastParsedKey = key;
-    console.debug('[SP/dbg] parsed', { key, msgs_n: parsed.msgs?.length, attachment: !!parsed.attachment, timing: !!parsed.timing });
 
     let stripped = cleanHostProse(text, parsed.msgs);
     // SMS-only mode: discard any host prose around the marker so the row
     // ends up empty and gets cut by the empty-host path below.
     if (settings.get('smsOnly')) stripped = '';
-    console.debug('[SP/dbg] stripped', { stripped_len: stripped.length, empty: stripped === '' });
 
     if (stripped !== '') {
         msg.mes = stripped;
@@ -154,13 +148,7 @@ async function handleMessageReceived(messageIdx) {
     // When stripped is '' we skip the DOM update — commitCharBurstFromMarker
     // will cut the host outright, so there's no point rendering it first.
 
-    try {
-        const burstIdx = await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
-        console.debug('[SP/dbg] commit ok', { hostIdx: messageIdx, burstIdx, new_chat_len: ctx().chat?.length });
-    } catch (err) {
-        console.error('[SP/dbg] commit threw', err);
-        throw err;
-    }
+    await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
     const ts = Date.now();
 
     if (modal.isOpen()) {
