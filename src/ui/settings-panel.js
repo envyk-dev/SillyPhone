@@ -80,6 +80,9 @@ function template() {
 
                 <hr/>
                 <h4>AI instructions</h4>
+                <label class="checkbox_label" title="Inject Flow A + SMS-mode prompts as user at depth 0 instead of system at depth 1. Strongest signal the model can receive; occasionally causes the model to acknowledge the instructions as if you said them.">
+                    <input type="checkbox" data-sp="forcefulChatInject"> Forceful chat inject (send marker instructions as user at depth 0)
+                </label>
                 <label>Flow A (main-chat SMS marker instructions):
                     <textarea data-sp="flowAInstructions" rows="6" style="width:100%"></textarea>
                 </label>

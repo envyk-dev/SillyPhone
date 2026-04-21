@@ -13,6 +13,7 @@ const DEFAULTS = {
     showBadge: true,
     showSmsRows: false,
     toastSound: false,
+    forcefulChatInject: false,
     rollingMemory: {
         enabled: false,
         every: 10,

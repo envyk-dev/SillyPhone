@@ -46,7 +46,10 @@ She types: > hey > u there?                                           ← writin
 export function updateInstructionsPrompt() {
     const enabled = settings.get('enabled');
     const text = enabled ? (settings.get('flowAInstructions') || '') : '';
-    setExtensionPrompt(KEY_INSTRUCTIONS, text, EXTENSION_PROMPT.IN_CHAT, 1, EXTENSION_PROMPT_ROLE.SYSTEM);
+    const forceful = !!settings.get('forcefulChatInject');
+    const depth = forceful ? 0 : 1;
+    const role = forceful ? EXTENSION_PROMPT_ROLE.USER : EXTENSION_PROMPT_ROLE.SYSTEM;
+    setExtensionPrompt(KEY_INSTRUCTIONS, text, EXTENSION_PROMPT.IN_CHAT, depth, role);
 }
 
 export function updateSummaryPrompt() {
@@ -59,12 +62,14 @@ export function updateSummaryPrompt() {
 }
 
 export function setSmsMode(on) {
+    const forceful = !!settings.get('forcefulChatInject');
+    const role = forceful ? EXTENSION_PROMPT_ROLE.USER : EXTENSION_PROMPT_ROLE.SYSTEM;
     setExtensionPrompt(
         KEY_SMS_MODE,
         on ? SMS_MODE_TEXT : '',
         EXTENSION_PROMPT.IN_CHAT,
         0,
-        EXTENSION_PROMPT_ROLE.SYSTEM,
+        role,
     );
 }
 
