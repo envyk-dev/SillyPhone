@@ -136,14 +136,20 @@ async function handleMessageReceived(messageIdx) {
         console.debug('[SillyPhone/dbg] bailed: dedup', { key, lastParsedKey });
         return;
     }
-    lastParsedKey = key;
 
     const text = msg.mes || '';
     const parsed = marker.parse(text);
     if (!parsed) {
+        // Don't claim the key yet — ST double-fires MESSAGE_RECEIVED on tool
+        // calls / continues, and the first fire can land with an empty or
+        // partial mes. Locking the key here would cause the REAL second fire
+        // (the one that has the marker) to hit dedup and get thrown away.
         console.debug('[SillyPhone/dbg] bailed: parse returned null', { mes_preview: text.slice(0, 200) });
         return;
     }
+    // Only mark the key as processed AFTER a successful parse. Still runs
+    // before commit so concurrent fires (same key, same mes) can't double-push.
+    lastParsedKey = key;
     console.debug('[SillyPhone/dbg] parsed OK', { msgs_n: parsed.msgs?.length, has_attachment: !!parsed.attachment, has_timing: !!parsed.timing });
 
     let stripped = cleanHostProse(text, parsed.msgs);
