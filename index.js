@@ -105,18 +105,22 @@ function restyleAllSmsRows() {
 }
 
 async function handleMessageReceived(messageIdx) {
-    if (!settings.get('enabled')) return;
+    console.debug('[SP/dbg] enter', { messageIdx });
+    if (!settings.get('enabled')) { console.debug('[SP/dbg] bail: disabled'); return; }
     memory.checkRollingTrigger();
 
     const chat = ctx().chat;
-    if (messageIdx == null || !Array.isArray(chat) || !chat[messageIdx]) return;
+    if (messageIdx == null || !Array.isArray(chat) || !chat[messageIdx]) {
+        console.debug('[SP/dbg] bail: bad idx/chat', { messageIdx, chat_len: chat?.length });
+        return;
+    }
     const msg = chat[messageIdx];
-    if (msg.is_user) return;
-    if (msg.extra?.sillyphone) return;
+    if (msg.is_user) { console.debug('[SP/dbg] bail: is_user'); return; }
+    if (msg.extra?.sillyphone) { console.debug('[SP/dbg] bail: already tagged'); return; }
 
     const swipeId = msg.swipe_id ?? 0;
     const key = `${messageIdx}:${swipeId}`;
-    if (key === lastParsedKey) return;
+    if (key === lastParsedKey) { console.debug('[SP/dbg] bail: dedup', { key, lastParsedKey }); return; }
 
     const text = msg.mes || '';
     const parsed = marker.parse(text);
@@ -125,13 +129,21 @@ async function handleMessageReceived(messageIdx) {
     // first fire can land with an empty or partial mes. Locking the key
     // here would cause the real second fire — the one carrying the
     // marker — to hit dedup and get dropped.
-    if (!parsed) return;
+    if (!parsed) {
+        console.debug('[SP/dbg] bail: parse null', {
+            key, mes_len: text.length, mes_has_marker: /<!--Phone:/.test(text),
+            mes_preview: text.slice(0, 150),
+        });
+        return;
+    }
     lastParsedKey = key;
+    console.debug('[SP/dbg] parsed', { key, msgs_n: parsed.msgs?.length, attachment: !!parsed.attachment, timing: !!parsed.timing });
 
     let stripped = cleanHostProse(text, parsed.msgs);
     // SMS-only mode: discard any host prose around the marker so the row
     // ends up empty and gets cut by the empty-host path below.
     if (settings.get('smsOnly')) stripped = '';
+    console.debug('[SP/dbg] stripped', { stripped_len: stripped.length, empty: stripped === '' });
 
     if (stripped !== '') {
         msg.mes = stripped;
@@ -142,7 +154,13 @@ async function handleMessageReceived(messageIdx) {
     // When stripped is '' we skip the DOM update — commitCharBurstFromMarker
     // will cut the host outright, so there's no point rendering it first.
 
-    await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
+    try {
+        const burstIdx = await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
+        console.debug('[SP/dbg] commit ok', { hostIdx: messageIdx, burstIdx, new_chat_len: ctx().chat?.length });
+    } catch (err) {
+        console.error('[SP/dbg] commit threw', err);
+        throw err;
+    }
     const ts = Date.now();
 
     if (modal.isOpen()) {
