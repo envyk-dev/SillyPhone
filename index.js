@@ -78,18 +78,18 @@ async function cleanAndCommitCharBurst(messageIdx, msg, parsed) {
         updateMessageDom(messageIdx, msg);
     }
 
-    await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
+    return commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
 }
 
 // Either play the burst inside the open modal (with timing if specified)
 // or bump the unread badge and surface a toast.
-async function notifyOrPlay(parsed) {
+async function notifyOrPlay(parsed, chatIdx) {
     const ts = Date.now();
     if (modal.isOpen()) {
         if (parsed.timing) {
-            await modal.playCharBurst(parsed.msgs, ts, parsed.attachment ?? null, parsed.timing);
+            await modal.playCharBurst(parsed.msgs, ts, parsed.attachment ?? null, parsed.timing, chatIdx);
         } else {
-            modal.appendBurst({ from: 'char', msgs: parsed.msgs, ts, attachment: parsed.attachment ?? null });
+            modal.appendBurst({ from: 'char', msgs: parsed.msgs, ts, attachment: parsed.attachment ?? null, chatIdx });
         }
         return;
     }
@@ -126,8 +126,8 @@ async function handleMessageReceived(messageIdx) {
     if (!parsed) return;
     lastParsedKey = key;
 
-    await cleanAndCommitCharBurst(messageIdx, msg, parsed);
-    await notifyOrPlay(parsed);
+    const burstIdx = await cleanAndCommitCharBurst(messageIdx, msg, parsed);
+    await notifyOrPlay(parsed, burstIdx);
 }
 
 function handleMessageSent() {
@@ -176,9 +176,9 @@ async function handleSend(payload) {
     const userBurst = chatSms.buildBurstMessage({
         from: 'user', msgs, ts, charName, userName, attachment,
     });
-    pushChatMessage(userBurst);
+    const userBurstIdx = pushChatMessage(userBurst);
     // Row-observer styles the new .mes row once ST renders it.
-    modal.appendBurst({ from: 'user', msgs, ts, attachment });
+    modal.appendBurst({ from: 'user', msgs, ts, attachment, chatIdx: userBurstIdx });
     modal.scrollToBottom();
 
     modal.setSendDisabled(true);

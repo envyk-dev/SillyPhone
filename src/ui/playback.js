@@ -29,15 +29,15 @@ function resolveTiming(text, t, isFirst) {
     return { delay, typeDuration };
 }
 
-export async function playBubbles(msgs, containerEl, side = 'char', ts = Date.now(), attachment = null, timing = null) {
+export async function playBubbles(msgs, containerEl, side = 'char', ts = Date.now(), attachment = null, timing = null, chatIdx = null) {
     if (reducedMotion()) {
-        bubbles.appendBurst({ from: side, msgs, ts, attachment }, containerEl);
+        bubbles.appendBurst({ from: side, msgs, ts, attachment, chatIdx }, containerEl);
         return;
     }
     // Pre-reply typing (if any) is repositioned below the new turn by
     // removing and letting showTyping re-append inside the container flow.
     bubbles.hideTyping(containerEl);
-    const turn = bubbles.openTurn(side, ts, containerEl, attachment);
+    const turn = bubbles.openTurn(side, ts, containerEl, attachment, chatIdx);
     for (let i = 0; i < msgs.length; i++) {
         const m = msgs[i];
         const t = resolveTiming(m, timing?.[i], i === 0);

@@ -10,6 +10,7 @@ import { ctx } from '../st.js';
 import { playBubbles } from './playback.js';
 import { SEND_ICON, PLUS_ICON, BACK_ICON, TRASH_ICON, TRASH_SMALL_ICON, CLOSE_ICON } from './icons.js';
 import { showSheet } from './modal/sheet.js';
+import { showInfoPopover, dismissPopover } from './modal/popover.js';
 import * as manageMode from './modal/manage-mode.js';
 import * as attachmentStaging from './modal/attachment-staging.js';
 
@@ -106,6 +107,20 @@ export function mount({ onSend, onReroll }) {
         if (e.target === modalEl) handleCloseClick();
     });
 
+    // Attachment description reveal — tap a card (outside manage mode) to
+    // peek at the description that's otherwise only in the model's context.
+    // Manage-mode owns the card click for selection, so bail out there.
+    messagesEl.addEventListener('click', (e) => {
+        if (manageMode.isActive()) return;
+        const el = e.target.closest('.sp-attachment-placeholder');
+        if (!el) return;
+        const chatIdx = Number(el.dataset.entryIdx);
+        if (!Number.isInteger(chatIdx)) return;
+        const att = ctx().chat?.[chatIdx]?.extra?.sillyphone?.attachment;
+        if (!att?.description) return;
+        showInfoPopover(modalEl, el, { kind: att.kind, body: att.description });
+    });
+
     modalEl.querySelector('.sp-modal-input').addEventListener('submit', (e) => {
         e.preventDefault();
         submitInput();
@@ -199,6 +214,9 @@ export function open() {
 
 export function close() {
     if (!modalEl) return;
+    // Dismiss any open popover first so its anchor math (pinned to the
+    // trigger's current position) doesn't misalign on reopen.
+    dismissPopover(modalEl);
     manageMode.exit();
     modalEl.style.display = 'none';
 }
@@ -275,7 +293,7 @@ export function scrollToBottom() {
     });
 }
 
-export async function playCharBurst(msgs, ts, attachment, timing) {
+export async function playCharBurst(msgs, ts, attachment, timing, chatIdx) {
     if (!modalEl || !isOpen()) return;
     if (manageMode.isActive()) {
         refresh();
@@ -284,7 +302,7 @@ export async function playCharBurst(msgs, ts, attachment, timing) {
     // Snap to bottom before the sequenced reveal starts so the user never
     // misses the first typing dots / bubble.
     scrollToBottom();
-    await playBubbles(msgs, messagesEl, 'char', ts, attachment ?? null, timing ?? null);
+    await playBubbles(msgs, messagesEl, 'char', ts, attachment ?? null, timing ?? null, chatIdx ?? null);
     reconcileRerollIcon();
 }
 

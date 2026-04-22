@@ -38,10 +38,12 @@ function scrollToBottom(el) {
     }
 }
 
-// Attachment placeholder element. Description is NEVER shown — user-facing
-// text is always the generic placeholder. Data model leaves room for a
-// future image upload; for now the element is always text-only.
-function attachmentPlaceholder(attachment, from) {
+// Attachment placeholder element. Card stays a pristine photo-frame — just
+// the kind icon + generic "Image"/"Video" label. When a description exists,
+// it rides on the element as a native `title` tooltip (desktop hover) and is
+// also surfaced as a tap-to-reveal popover (wired in modal.js). Kept off the
+// card itself to preserve the IM-app immersion.
+function attachmentPlaceholder(attachment, from, chatIdx) {
     if (!attachment) return null;
     const el = document.createElement('div');
     el.className = `sp-attachment-placeholder sp-attachment-placeholder-${from === 'user' ? 'user' : 'char'} sp-attachment-${attachment.kind}`;
@@ -54,6 +56,18 @@ function attachmentPlaceholder(attachment, from) {
     labelEl.className = 'sp-attachment-placeholder-label';
     labelEl.textContent = label;
     el.append(iconEl, labelEl);
+    // data-entry-idx is what the reveal-popover handler in modal.js keys
+    // off. It MUST be set for live-appended cards too, not just on full
+    // re-renders, or the popover silently no-ops until the next refresh.
+    if (Number.isInteger(chatIdx)) {
+        el.dataset.entryIdx = String(chatIdx);
+        el.dataset.attachment = '1';
+    }
+    const desc = typeof attachment.description === 'string' ? attachment.description.trim() : '';
+    if (desc) {
+        el.title = desc;
+        el.dataset.hasDescription = '1';
+    }
     return el;
 }
 
@@ -67,12 +81,8 @@ export function renderThread(thread, containerEl) {
         }
         const turn = turnContainer(entry.from, entry.ts);
         const entryKey = typeof entry.chatIdx === 'number' ? entry.chatIdx : ei;
-        const att = attachmentPlaceholder(entry.attachment, entry.from);
-        if (att) {
-            att.dataset.entryIdx = String(entryKey);
-            att.dataset.attachment = '1';
-            turn.appendChild(att);
-        }
+        const att = attachmentPlaceholder(entry.attachment, entry.from, entryKey);
+        if (att) turn.appendChild(att);
         for (let mi = 0; mi < entry.msgs.length; mi++) {
             const b = bubble(entry.msgs[mi], entry.from);
             b.dataset.entryIdx = String(entryKey);
@@ -93,7 +103,7 @@ export function appendBurst(burst, containerEl) {
         containerEl.appendChild(timestampHeader(burst.ts));
     }
     const turn = turnContainer(burst.from, burst.ts);
-    const att = attachmentPlaceholder(burst.attachment, burst.from);
+    const att = attachmentPlaceholder(burst.attachment, burst.from, burst.chatIdx);
     if (att) turn.appendChild(att);
     for (const msg of burst.msgs || []) {
         turn.appendChild(bubble(msg, burst.from));
@@ -103,7 +113,7 @@ export function appendBurst(burst, containerEl) {
     return turn;
 }
 
-export function openTurn(from, ts, containerEl, attachment) {
+export function openTurn(from, ts, containerEl, attachment, chatIdx) {
     const turns = containerEl.querySelectorAll('.sp-turn');
     const last = turns[turns.length - 1];
     const lastTs = last ? Number(last.dataset.ts || 0) : 0;
@@ -111,7 +121,7 @@ export function openTurn(from, ts, containerEl, attachment) {
         containerEl.appendChild(timestampHeader(ts));
     }
     const turn = turnContainer(from, ts);
-    const att = attachmentPlaceholder(attachment, from);
+    const att = attachmentPlaceholder(attachment, from, chatIdx);
     if (att) turn.appendChild(att);
     containerEl.appendChild(turn);
     return turn;

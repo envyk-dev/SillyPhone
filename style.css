@@ -623,6 +623,35 @@
     to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* Info-popover variant — read-only reveal (attachment description, etc).
+   Uses the same shell as the action menu above; swap padding/layout for
+   prose. The kind header picks up the lavender accent used elsewhere. */
+.sp-popover-info {
+    padding: 10px 12px;
+    max-width: 240px;
+}
+.sp-popover-info-kind {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #ad72f4;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.sp-popover-info-icon { font-size: 12px; line-height: 1; }
+.sp-popover-info-body {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #e6e6e8;
+    font-style: italic;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
 /* ---------- Manage mode (multi-select delete) ---------- */
 .sp-manage-mode .sp-bubble {
     cursor: pointer;
@@ -809,6 +838,15 @@
 .sp-attachment-placeholder:not(.sp-attachment-placeholder-user) .sp-attachment-placeholder-label {
     color: #8e8e93;
 }
+/* When a description exists, the card is tap-to-reveal (outside manage mode).
+   Hint that with a pointer cursor; a subtle lavender ring marks the card
+   whose description popover is currently open. */
+.sp-attachment-placeholder[data-has-description] {
+    cursor: pointer;
+}
+.sp-attachment-placeholder.sp-attachment-open {
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.7);
+}
 /* Future image swap: drop an <img> inside the placeholder. The frame
    sheds its fixed 4:3 / 200px constraint and grows to the image's
    natural aspect ratio (capped at 270×360 — IM-app conventions).
@@ -835,11 +873,15 @@
     cursor: pointer;
     position: relative;
 }
+/* Selection pill sits INSIDE the card (top-right). Outside positioning
+   would be clipped by the card's `overflow: hidden` (needed for the
+   radial sheen). Shape + stroke match the bubble's selection circle
+   so selections read the same across bubbles and cards. */
 .sp-manage-mode .sp-attachment-placeholder::before {
     content: "";
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 8px;
+    right: 8px;
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -852,10 +894,9 @@
     font-size: 13px;
     font-weight: 700;
     line-height: 1;
+    z-index: 2;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
-.sp-manage-mode .sp-attachment-placeholder-user::before { right: calc(100% + 10px); }
-.sp-manage-mode .sp-attachment-placeholder:not(.sp-attachment-placeholder-user)::before { left: calc(100% + 10px); }
 .sp-manage-mode .sp-attachment-placeholder.sp-selected::before {
     content: "✓";
     background: #8b5cf6;

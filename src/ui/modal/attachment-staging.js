@@ -58,7 +58,7 @@ export function openMenu() {
 
 function promptDescription(kind) {
     const label = kind === 'video' ? 'video' : 'image';
-    const desc = window.prompt(`Describe the ${label} you want to send:\n(Visible to the character's context, not shown in the chat)`);
+    const desc = window.prompt(`Describe the ${label} you want to send:\n(Visible to the character's context — hover or tap the card in chat to preview)`);
     if (desc == null) return;
     const trimmed = desc.trim();
     if (!trimmed) return;
