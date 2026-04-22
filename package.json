@@ -1,0 +1,21 @@
+{
+    "name": "sillyphone",
+    "version": "0.7.0",
+    "private": true,
+    "type": "module",
+    "description": "Two-way SMS extension for SillyTavern",
+    "author": "envyk-dev",
+    "license": "MIT",
+    "homepage": "https://github.com/envyk-dev/SillyPhone",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/envyk-dev/SillyPhone.git"
+    },
+    "scripts": {
+        "test": "node --test tests/*.test.js",
+        "lint": "eslint ."
+    },
+    "devDependencies": {
+        "eslint": "^8.57.0"
+    }
+}

@@ -78,23 +78,39 @@ Enable in Settings → SillyPhone to auto-summarize older main-chat messages and
 
 By default, anything the character writes around a `<!--Phone:...-->` marker (scene prose, narration, etc.) survives in the main chat alongside the extracted SMS row. Toggle **SMS-only mode** in Settings to drop that prose: after marker extraction, the host row is cut entirely, leaving just the SMS bubble in the chat log. Useful for pure-texting RP where the main chat is the phone conversation and there's no scene to preserve. Empty host rows (e.g. when the model emits only a marker) are always cut, regardless of this setting.
 
+## Manage mode
+
+Inside the phone modal, the menu (⋮) → **Delete messages** enters manage mode: tap individual bubbles to multi-select, then bulk-delete via the action bar. Single-bubble deletes also work — tap a bubble to select, confirm in the bar.
+
+## Reroll
+
+The last AI SMS burst gets a reroll icon. Tap it to cut that burst and re-run `/trigger`, generating a fresh reply with the same context.
+
+## Edit sync
+
+Editing an SMS row directly in the main chat log (via SillyTavern's normal edit-message flow) re-parses the row back into `extra.sillyphone` so the phone modal stays in sync. Removing all bubbles from a row deletes it; adding new ones updates in place.
+
 ## Settings
 
 Open Extensions drawer → **SillyPhone** panel:
 
 - Enabled / SMS-only mode / Show badge / Toast sound
 - Rolling memory toggle + thresholds + custom summarization prompt
+- Forceful chat inject mode (Flow A instructions injected at depth 0)
+- Show hidden `[SMS]` rows in main chat log (debug toggle)
 - Editable Flow A instructions
 - Clear phone thread / Clear all phone data for current chat
 
-Delete individual SMS bubbles or attachments from inside the phone modal via the menu (⋮) → **Delete messages**.
+A **wand-menu** entry (📱 SillyPhone) mirrors the visibility toggle for quick access.
 
 ## Files
 
 ```
 SillyPhone/
 ├── manifest.json
-├── index.js                # entry + event wiring
+├── package.json            # type:module, test + lint scripts
+├── .eslintrc.cjs           # standalone-repo lint config (mirrors ST's)
+├── index.js                # entry — event wiring + orchestration
 ├── style.css
 ├── README.md
 ├── LICENSE
@@ -105,19 +121,36 @@ SillyPhone/
 │   ├── prompt-builder.js   # Flow A instructions + summarization prompt
 │   ├── context.js          # setExtensionPrompt: instructions, summary, SMS-mode
 │   ├── settings.js         # extension_settings storage + migrations
-│   ├── memory.js           # summary cache + rolling memory
+│   ├── settings-migrate.js # versioned migration table (CURRENT_VERSION=7)
+│   ├── memory.js           # rolling-memory orchestration
+│   ├── memory-policy.js    # pure shouldTriggerRolling kernel
+│   ├── host-prose.js       # cleanHostProse + splitUserInput (pure)
+│   ├── commands.js         # clearThread + thread-data helpers
+│   ├── events.js           # bindAll({onReceived,onSent,onChanged,onEdited})
+│   ├── row-observer.js     # MutationObserver styling for [SMS] rows
+│   ├── util.js             # escapeHtml + shared helpers
+│   ├── types.js            # shared JSDoc typedefs
 │   ├── st.js               # SillyTavern API adapter
 │   └── ui/
 │       ├── badge.js
 │       ├── toast.js
 │       ├── bubbles.js
+│       ├── icons.js        # shared SVG icon set
 │       ├── playback.js     # sequential bubble reveal with typing indicator
-│       ├── modal.js
-│       └── settings-panel.js
+│       ├── settings-panel.js
+│       ├── extensions-menu.js  # wand-menu entry
+│       ├── modal.js        # shell — wires the submodules below
+│       └── modal/
+│           ├── sheet.js              # bubble container + scroll/render
+│           ├── attachment-staging.js # compose-box attachment preview
+│           └── manage-mode.js        # multi-select + bulk delete UI
 └── tests/
-    ├── marker.test.js          # node --test
-    ├── chat-sms.test.js        # node --test
-    └── prompt-builder.test.js  # node --test
+    ├── marker.test.js
+    ├── chat-sms.test.js
+    ├── prompt-builder.test.js
+    ├── settings-migrate.test.js
+    ├── memory-policy.test.js
+    └── host-prose.test.js
 ```
 
 ## Running unit tests
@@ -125,9 +158,21 @@ SillyPhone/
 ```bash
 cd SillyPhone
 node --test tests/*.test.js
+# or, with package.json scripts:
+npm test
 ```
 
-Only pure-logic modules have unit tests (marker parser, burst builder, prompt defaults). UI and SillyTavern integration are verified manually in-app.
+Only pure-logic modules have unit tests (marker parser, burst builder, prompt defaults, settings migrations, rolling-memory policy, host-prose). Anything that imports `src/st.js` (which pulls SillyTavern's `script.js`) is verified manually in-app — Node's loader can't resolve `script.js` standalone.
+
+## Linting
+
+Inside a SillyTavern checkout, ST's root `.eslintrc.cjs` lints SillyPhone via its `public/**/*.js` override — no extra setup needed. For the standalone clone:
+
+```bash
+cd SillyPhone
+npm install
+npm run lint
+```
 
 ## License
 
