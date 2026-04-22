@@ -65,6 +65,22 @@
     }
 }
 
+/* iOS PWA status-bar paint. When apple-mobile-web-app-status-bar-style
+   resolves to translucent (iOS 17+ tends to regardless of the meta), the
+   bar shows whatever's under it. Paint a solid black strip inside the
+   top safe-area so the translucent bar reads as pure black on iOS and
+   zero-height (invisible) on everything else. */
+#sillyphone-status-bar-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top, 0px);
+    background: #000;
+    z-index: 2147483647;
+    pointer-events: none;
+}
+
 /* ---------- Toast ---------- */
 #sillyphone-toast-container {
     position: fixed;

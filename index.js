@@ -228,6 +228,7 @@ function init() {
     try {
         settings.init();
         lockStatusBarBlack();
+        paintStatusBarSafeArea();
         modal.mount({ onSend: handleSend, onReroll: handleReroll });
         modal.setCharInfo(currentCharName());
         badge.mount(openPhone);
@@ -267,6 +268,19 @@ function lockStatusBarBlack() {
             meta.setAttribute('content', TARGET);
         }
     }).observe(meta, { attributes: true, attributeFilter: ['content'] });
+}
+
+// iOS 17+ tends to render the PWA status bar translucent regardless of
+// what apple-mobile-web-app-status-bar-style says, so the bar shows
+// whatever page content is underneath it (dark during load, gray once
+// ST's top bar paints). Mounting a fixed black strip sized to
+// env(safe-area-inset-top) makes "whatever's underneath" solid black on
+// iOS and zero-height nothing everywhere else. See style.css for the rule.
+function paintStatusBarSafeArea() {
+    if (document.getElementById('sillyphone-status-bar-bg')) return;
+    const bar = document.createElement('div');
+    bar.id = 'sillyphone-status-bar-bg';
+    (document.documentElement || document.body).appendChild(bar);
 }
 
 // Poll via rAF until SillyTavern.getContext is available, then init().
