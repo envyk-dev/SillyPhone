@@ -87,6 +87,18 @@ body {
     padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* ST puts `-webkit-transform: translateZ(0)` on <html> to work around a
+   Chrome blur flicker. Side effect on iOS PWA: it creates a stacking
+   context at the root that breaks `black-translucent` — the content area
+   stops extending into the safe zone, env(safe-area-inset-top) collapses
+   to 0, and the status bar falls back to iOS's default gray.
+   Neutralizing the transform restores safe-area extension. If the Chrome
+   flicker bug comes back for you, remove this block. */
+html {
+    transform: none !important;
+    -webkit-transform: none !important;
+}
+
 /* ---------- Toast ---------- */
 #sillyphone-toast-container {
     position: fixed;
