@@ -13,6 +13,7 @@ import * as settingsPanel from './src/ui/settings-panel.js';
 import * as extensionsMenu from './src/ui/extensions-menu.js';
 import * as rowObserver from './src/row-observer.js';
 import * as events from './src/events.js';
+import { cleanHostProse, splitUserInput } from './src/host-prose.js';
 
 let lastParsedKey = null;
 
@@ -30,8 +31,16 @@ function openPhone() {
     badge.refresh();
 }
 
-function splitUserInput(text) {
-    return text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+// Dedup on idx + swipe + content fingerprint. Position alone isn't enough:
+// after a reroll (cut burst + /trigger), a brand-new generation lands at
+// the same idx:swipe as the previous one and would be falsely dropped as
+// a duplicate. Fingerprint = length + first 64 chars is plenty to
+// disambiguate distinct generations while still catching genuine double-
+// fires (tool calls, continue/append) whose content is identical.
+function isDuplicateReceive(messageIdx, swipeId, text) {
+    const key = `${messageIdx}:${swipeId}:${text.length}:${text.slice(0, 64)}`;
+    if (key === lastParsedKey) return { dup: true, key };
+    return { dup: false, key };
 }
 
 async function commitCharBurstFromMarker(hostIdx, parsedMsgs, attachment, hostResidualText) {
@@ -55,23 +64,43 @@ async function commitCharBurstFromMarker(hostIdx, parsedMsgs, attachment, hostRe
     return burstIdx;
 }
 
-// Escape a string for use inside a RegExp pattern.
-function escapeRegex(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Strip marker/blockquote/verbatim-line prose from the host AI message and
+// commit the SMS burst. Mutates msg.mes only when residual prose remains,
+// otherwise the empty host gets cut by commitCharBurstFromMarker.
+async function cleanAndCommitCharBurst(messageIdx, msg, parsed) {
+    let stripped = cleanHostProse(msg.mes || '', parsed.msgs);
+    if (settings.get('smsOnly')) stripped = '';
+
+    if (stripped !== '') {
+        msg.mes = stripped;
+        // Re-render through ST's own formatter so markdown and linebreaks
+        // survive. Raw textContent would collapse \n to spaces and break paragraphs.
+        updateMessageDom(messageIdx, msg);
+    }
+
+    await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
 }
 
-// Remove marker, blockquote pseudo-transcript lines, AND any line that
-// contains a parsed SMS message verbatim (model writing the message body
-// as prose despite Flow A rule 5). Returns the cleaned host text.
-function cleanHostProse(text, parsedMsgs) {
-    let cleaned = marker.strip(text);
-    cleaned = cleaned.replace(/^\s*>.*$/gm, '');
-    for (const m of parsedMsgs || []) {
-        if (!m || typeof m !== 'string') continue;
-        const pat = new RegExp(`^.*${escapeRegex(m)}.*$`, 'gm');
-        cleaned = cleaned.replace(pat, '');
+// Either play the burst inside the open modal (with timing if specified)
+// or bump the unread badge and surface a toast.
+async function notifyOrPlay(parsed) {
+    const ts = Date.now();
+    if (modal.isOpen()) {
+        if (parsed.timing) {
+            await modal.playCharBurst(parsed.msgs, ts, parsed.attachment ?? null, parsed.timing);
+        } else {
+            modal.appendBurst({ from: 'char', msgs: parsed.msgs, ts, attachment: parsed.attachment ?? null });
+        }
+        return;
     }
-    return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+    const unreadBump = parsed.msgs.length + (parsed.attachment ? 1 : 0);
+    storage.incUnread(unreadBump);
+    badge.refresh();
+    toast.show({
+        charName: currentCharName(),
+        msgs: parsed.attachment ? [...parsed.msgs, '[attachment]'] : parsed.msgs,
+        onClick: openPhone,
+    });
 }
 
 async function handleMessageReceived(messageIdx) {
@@ -84,16 +113,9 @@ async function handleMessageReceived(messageIdx) {
     if (msg.is_user) return;
     if (msg.extra?.sillyphone) return;
 
-    const swipeId = msg.swipe_id ?? 0;
     const text = msg.mes || '';
-    // Dedup on idx + swipe + content fingerprint. Position alone isn't enough:
-    // after a reroll (cut burst + /trigger), a brand-new generation lands at
-    // the same idx:swipe as the previous one and would be falsely dropped as
-    // a duplicate. Fingerprint = length + first 64 chars is plenty to
-    // disambiguate distinct generations while still catching genuine double-
-    // fires (tool calls, continue/append) whose content is identical.
-    const key = `${messageIdx}:${swipeId}:${text.length}:${text.slice(0, 64)}`;
-    if (key === lastParsedKey) return;
+    const { dup, key } = isDuplicateReceive(messageIdx, msg.swipe_id ?? 0, text);
+    if (dup) return;
 
     const parsed = marker.parse(text);
     // Don't claim the dedup key until parse succeeds. ST double-fires
@@ -104,39 +126,8 @@ async function handleMessageReceived(messageIdx) {
     if (!parsed) return;
     lastParsedKey = key;
 
-    let stripped = cleanHostProse(text, parsed.msgs);
-    // SMS-only mode: discard any host prose around the marker so the row
-    // ends up empty and gets cut by the empty-host path below.
-    if (settings.get('smsOnly')) stripped = '';
-
-    if (stripped !== '') {
-        msg.mes = stripped;
-        // Re-render through ST's own formatter so markdown and linebreaks
-        // survive. Raw textContent would collapse \n to spaces and break paragraphs.
-        updateMessageDom(messageIdx, msg);
-    }
-    // When stripped is '' we skip the DOM update — commitCharBurstFromMarker
-    // will cut the host outright, so there's no point rendering it first.
-
-    await commitCharBurstFromMarker(messageIdx, parsed.msgs, parsed.attachment ?? null, stripped);
-    const ts = Date.now();
-
-    if (modal.isOpen()) {
-        if (parsed.timing) {
-            await modal.playCharBurst(parsed.msgs, ts, parsed.attachment ?? null, parsed.timing);
-        } else {
-            modal.appendBurst({ from: 'char', msgs: parsed.msgs, ts, attachment: parsed.attachment ?? null });
-        }
-    } else {
-        const unreadBump = parsed.msgs.length + (parsed.attachment ? 1 : 0);
-        storage.incUnread(unreadBump);
-        badge.refresh();
-        toast.show({
-            charName: currentCharName(),
-            msgs: parsed.attachment ? [...parsed.msgs, '[attachment]'] : parsed.msgs,
-            onClick: openPhone,
-        });
-    }
+    await cleanAndCommitCharBurst(messageIdx, msg, parsed);
+    await notifyOrPlay(parsed);
 }
 
 function handleMessageSent() {
