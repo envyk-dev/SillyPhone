@@ -8,9 +8,9 @@ import * as chatSms from '../chat-sms.js';
 import * as commands from '../commands.js';
 import { ctx } from '../st.js';
 import { playBubbles } from './playback.js';
-import { SEND_ICON, PLUS_ICON, BACK_ICON, TRASH_ICON, TRASH_SMALL_ICON, CLOSE_ICON } from './icons.js';
-import { showSheet } from './modal/sheet.js';
+import { SEND_ICON, PLUS_ICON, BACK_ICON, TRASH_ICON } from './icons.js';
 import { showInfoPopover, dismissPopover } from './modal/popover.js';
+import { showSettingsSheet, dismissSettingsSheet } from './modal/settings-sheet.js';
 import * as manageMode from './modal/manage-mode.js';
 import * as attachmentStaging from './modal/attachment-staging.js';
 
@@ -214,9 +214,11 @@ export function open() {
 
 export function close() {
     if (!modalEl) return;
-    // Dismiss any open popover first so its anchor math (pinned to the
-    // trigger's current position) doesn't misalign on reopen.
+    // Dismiss any open popover / sheet first so nothing stale resurfaces
+    // on reopen (popover anchor math would misalign; sheet would just
+    // re-appear unexpectedly).
     dismissPopover(modalEl);
+    dismissSettingsSheet(modalEl);
     manageMode.exit();
     modalEl.style.display = 'none';
 }
@@ -313,10 +315,10 @@ function handleCloseClick() {
 
 function openMenu() {
     if (manageMode.isActive()) return;
-    showSheet(modalEl, [
-        { label: 'Delete messages', icon: CLOSE_ICON, action: manageMode.enter },
-        { label: 'Clear chat', icon: TRASH_SMALL_ICON, action: confirmClearChat, destructive: true },
-    ]);
+    showSettingsSheet(modalEl, {
+        onEnterManage: manageMode.enter,
+        onClearChat: confirmClearChat,
+    });
 }
 
 async function confirmClearChat() {

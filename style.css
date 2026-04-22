@@ -55,10 +55,11 @@
 }
 
 /* On mobile, ST's bottom UI (chat input, floating buttons, keyboard) covers the
-   badge. Move it to the top-right instead. */
+   badge. Move it just below ST's top bar instead — --topBarBlockSize is
+   defined on ST's root so the badge adapts if the user scales the top bar. */
 @media (max-width: 600px) {
     #sillyphone-badge {
-        top: 20px !important;
+        top: calc(var(--topBarBlockSize, 40px) + 4px) !important;
         right: 10px !important;
         bottom: auto !important;
     }
@@ -539,6 +540,103 @@
 }
 
 .sp-sheet-cancel:hover { background: #4a4a4c; }
+
+/* Title row above the settings sheet content. */
+.sp-sheet-title {
+    padding: 10px 14px 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #8e8e93;
+    font-weight: 700;
+}
+
+/* Small drag-handle visual cue at the top of the sheet. Not wired to a
+   real gesture — pure affordance. */
+.sp-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: #48484a;
+    border-radius: 2px;
+    margin: 6px auto 2px;
+}
+
+.sp-sheet-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 6px 8px;
+}
+
+/* Toggle row inside the settings sheet. Same footprint as .sp-sheet-btn
+   so the action rows below (Delete / Clear) line up visually. */
+.sp-sheet-toggle {
+    background: transparent;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    transition: background 0.1s;
+}
+
+.sp-sheet-toggle:hover,
+.sp-sheet-toggle:active { background: rgba(255, 255, 255, 0.08); }
+
+.sp-sheet-toggle-label {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+}
+
+.sp-sheet-toggle-main {
+    font-size: 15px;
+    color: white;
+    font-weight: 500;
+}
+
+.sp-sheet-toggle-sub {
+    font-size: 12px;
+    color: #8e8e93;
+    line-height: 1.3;
+}
+
+/* iOS-style switch. Lavender gradient when on, neutral gray when off.
+   Purely cosmetic — state is read/written via settings.get/set. */
+.sp-switch {
+    width: 38px;
+    height: 22px;
+    background: #48484a;
+    border-radius: 999px;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.18s;
+}
+
+.sp-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: left 0.18s;
+}
+
+.sp-switch.on {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6 60%, #ad72f4);
+}
+
+.sp-switch.on::after { left: 18px; }
 
 @keyframes sp-fade-in {
     from { opacity: 0; }

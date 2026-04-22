@@ -227,6 +227,10 @@ async function handleReroll() {
 function init() {
     try {
         settings.init();
+        // Blend iOS PWA status bar into the phone modal chrome. ST ships
+        // #333 in index.html — we take it to pure black so the bar doesn't
+        // clash with the near-black phone header on mobile standalone.
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#000000');
         modal.mount({ onSend: handleSend, onReroll: handleReroll });
         modal.setCharInfo(currentCharName());
         badge.mount(openPhone);
