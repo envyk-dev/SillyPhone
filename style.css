@@ -65,40 +65,6 @@
     }
 }
 
-/* iOS PWA status-bar paint. On iOS 17+ the status bar is effectively
-   translucent regardless of the apple-mobile-web-app-status-bar-style
-   value — with `black-translucent` the page extends under the bar and
-   this strip gives the compositor solid black to show. env() resolves
-   to 0px off iOS so the element is invisible and harmless everywhere
-   else. Pair with the body padding below so ST's content doesn't slide
-   under the bar. */
-#sillyphone-status-bar-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-top, 0px);
-    background: #000;
-    z-index: 2147483647;
-    pointer-events: none;
-}
-
-body {
-    padding-top: env(safe-area-inset-top, 0px);
-}
-
-/* ST puts `-webkit-transform: translateZ(0)` on <html> to work around a
-   Chrome blur flicker. Side effect on iOS PWA: it creates a stacking
-   context at the root that breaks `black-translucent` — the content area
-   stops extending into the safe zone, env(safe-area-inset-top) collapses
-   to 0, and the status bar falls back to iOS's default gray.
-   Neutralizing the transform restores safe-area extension. If the Chrome
-   flicker bug comes back for you, remove this block. */
-html {
-    transform: none !important;
-    -webkit-transform: none !important;
-}
-
 /* ---------- Toast ---------- */
 #sillyphone-toast-container {
     position: fixed;

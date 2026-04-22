@@ -227,8 +227,6 @@ async function handleReroll() {
 function init() {
     try {
         settings.init();
-        lockStatusBarBlack();
-        paintStatusBarSafeArea();
         modal.mount({ onSend: handleSend, onReroll: handleReroll });
         modal.setCharInfo(currentCharName());
         badge.mount(openPhone);
@@ -250,37 +248,6 @@ function init() {
     } catch (err) {
         console.error('[SillyPhone] init failed', err);
     }
-}
-
-// Pin the iOS PWA status bar to black so it blends with the phone modal
-// chrome. ST's power-user.js rewrites <meta name="theme-color"> to the
-// active theme's "Blur Tint" color on every theme apply — this observer
-// wins the race and snaps it back. `content`-attribute filter keeps the
-// callback narrow; the TARGET check prevents an infinite loop when our
-// own set fires the observer.
-function lockStatusBarBlack() {
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (!meta) return;
-    const TARGET = '#000000';
-    meta.setAttribute('content', TARGET);
-    new MutationObserver(() => {
-        if (meta.getAttribute('content') !== TARGET) {
-            meta.setAttribute('content', TARGET);
-        }
-    }).observe(meta, { attributes: true, attributeFilter: ['content'] });
-}
-
-// iOS 17+ tends to render the PWA status bar translucent regardless of
-// what apple-mobile-web-app-status-bar-style says, so the bar shows
-// whatever page content is underneath it (dark during load, gray once
-// ST's top bar paints). Mounting a fixed black strip sized to
-// env(safe-area-inset-top) makes "whatever's underneath" solid black on
-// iOS and zero-height nothing everywhere else. See style.css for the rule.
-function paintStatusBarSafeArea() {
-    if (document.getElementById('sillyphone-status-bar-bg')) return;
-    const bar = document.createElement('div');
-    bar.id = 'sillyphone-status-bar-bg';
-    (document.documentElement || document.body).appendChild(bar);
 }
 
 // Poll via rAF until SillyTavern.getContext is available, then init().
