@@ -11,6 +11,8 @@ import * as toast from './src/ui/toast.js';
 import * as modal from './src/ui/modal.js';
 import * as settingsPanel from './src/ui/settings-panel.js';
 import * as extensionsMenu from './src/ui/extensions-menu.js';
+import * as rowObserver from './src/row-observer.js';
+import * as events from './src/events.js';
 
 let lastParsedKey = null;
 
@@ -49,9 +51,7 @@ async function commitCharBurstFromMarker(hostIdx, parsedMsgs, attachment, hostRe
     }
 
     const burstIdx = pushChatMessage(burstMsg);
-    // Apply styling immediately — MESSAGE_RENDERED may not fire for
-    // programmatically-pushed messages in all ST builds.
-    applySmsRowStyling(burstIdx);
+    // The row-observer will add .sp-chat-sms as soon as ST renders the row.
     return burstIdx;
 }
 
@@ -72,36 +72,6 @@ function cleanHostProse(text, parsedMsgs) {
         cleaned = cleaned.replace(pat, '');
     }
     return cleaned.replace(/\n{3,}/g, '\n\n').trim();
-}
-
-// Tag SMS rows with a class so CSS can hide the entire .mes element.
-// Retries across animation frames because ST's addOneMessage renders async —
-// the first query can fire before the DOM element exists.
-function applySmsRowStyling(messageIdx, retries = 10) {
-    if (messageIdx == null) return;
-    const msg = ctx().chat?.[messageIdx];
-    if (!msg?.extra?.sillyphone) return;
-    const row = document.querySelector(`#chat .mes[mesid="${messageIdx}"]`);
-    if (!row) {
-        if (retries > 0) {
-            requestAnimationFrame(() => applySmsRowStyling(messageIdx, retries - 1));
-        } else {
-            console.warn('[SillyPhone] row not found for styling', messageIdx);
-        }
-        return;
-    }
-    row.classList.add('sp-chat-sms');
-}
-
-// Iterate current chat and restyle every tagged SMS row. Used on
-// CHAT_CHANGED (reload) so existing bursts pick up their classes again
-// after ST rebuilds the DOM.
-function restyleAllSmsRows() {
-    const chat = ctx().chat;
-    if (!Array.isArray(chat)) return;
-    for (let i = 0; i < chat.length; i++) {
-        if (chat[i]?.extra?.sillyphone) applySmsRowStyling(i);
-    }
 }
 
 async function handleMessageReceived(messageIdx) {
@@ -181,21 +151,16 @@ function handleChatChanged() {
     modal.refresh();
     badge.refresh();
     context.updateAll();
-    // After ST rebuilds the chat DOM, restyle any tagged SMS rows.
-    requestAnimationFrame(restyleAllSmsRows);
-}
-
-// MESSAGE_RENDERED handler — same styling as applySmsRowStyling. Kept as a
-// safety net for messages that weren't styled via the direct call after push.
-function handleMessageRendered(messageIdx) {
-    applySmsRowStyling(messageIdx);
+    // ST may re-mount #chat; re-bind the observer if needed, then sweep any
+    // rows it already rendered in this frame.
+    rowObserver.start();
+    requestAnimationFrame(rowObserver.styleAllTaggedRows);
 }
 
 // When the user edits an SMS row directly in the main chat log, re-parse
 // its `mes` back into `extra.sillyphone` so the phone modal stays in sync.
 // Non-SMS edits are a no-op (guard on the tag).
 async function handleMessageEdited(messageIdx) {
-    console.debug('[SillyPhone] edit event fired', messageIdx);
     const idx = Number(messageIdx);
     const chat = ctx().chat;
     if (!Number.isInteger(idx) || !Array.isArray(chat) || !chat[idx]) return;
@@ -220,8 +185,8 @@ async function handleSend(payload) {
     const userBurst = chatSms.buildBurstMessage({
         from: 'user', msgs, ts, charName, userName, attachment,
     });
-    const userBurstIdx = pushChatMessage(userBurst);
-    applySmsRowStyling(userBurstIdx);
+    pushChatMessage(userBurst);
+    // Row-observer styles the new .mes row once ST renders it.
     modal.appendBurst({ from: 'user', msgs, ts, attachment });
     modal.scrollToBottom();
 
@@ -270,7 +235,6 @@ async function handleReroll() {
 
 function init() {
     try {
-        const c = ctx();
         settings.init();
         modal.mount({ onSend: handleSend, onReroll: handleReroll });
         modal.setCharInfo(currentCharName());
@@ -279,32 +243,44 @@ function init() {
         settingsPanel.applySmsRowVisibility();
         extensionsMenu.mount();
 
-        c.eventSource.on(c.eventTypes.MESSAGE_RECEIVED, handleMessageReceived);
-        c.eventSource.on(c.eventTypes.MESSAGE_SENT, handleMessageSent);
-        c.eventSource.on(c.eventTypes.CHAT_CHANGED, handleChatChanged);
-        c.eventSource.on(c.eventTypes.MESSAGE_RENDERED, handleMessageRendered);
-        // Subscribe to every event whose name hints at message edit/update.
-        // Different ST builds expose different subsets; idempotent handler
-        // makes dual fires harmless. Logs each subscription for diagnostic.
-        const editEventNames = Object.keys(c.eventTypes).filter(k =>
-            /MESSAGE_(UPDATED|EDITED|SAVED|CHANGED)/.test(k),
-        );
-        for (const name of editEventNames) {
-            c.eventSource.on(c.eventTypes[name], handleMessageEdited);
-        }
-        console.debug('[SillyPhone] subscribed to edit events:', editEventNames);
+        events.bindAll({
+            onReceived: handleMessageReceived,
+            onSent: handleMessageSent,
+            onChanged: handleChatChanged,
+            onEdited: handleMessageEdited,
+        });
 
         context.updateAll();
-        console.log('[SillyPhone] loaded v0.4.0');
+        rowObserver.start();
+        rowObserver.styleAllTaggedRows();
+        console.log('[SillyPhone] loaded v0.7.0');
     } catch (err) {
         console.error('[SillyPhone] init failed', err);
     }
 }
 
-if (typeof SillyTavern !== 'undefined' && SillyTavern.getContext) {
-    init();
-} else {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(init, 100);
+// Poll via rAF until SillyTavern.getContext is available, then init().
+// rAF naturally gates on the first frame, so this also covers the
+// pre-DOMContentLoaded case without a separate listener. 10s ceiling keeps
+// a never-loading host from spinning forever.
+function waitForSillyTavern(timeoutMs = 10000) {
+    return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const check = () => {
+            if (typeof SillyTavern !== 'undefined' && typeof SillyTavern.getContext === 'function') {
+                resolve();
+                return;
+            }
+            if (Date.now() - start > timeoutMs) {
+                reject(new Error(`SillyTavern context did not become available within ${timeoutMs}ms`));
+                return;
+            }
+            requestAnimationFrame(check);
+        };
+        check();
     });
 }
+
+waitForSillyTavern()
+    .then(init)
+    .catch(err => console.error('[SillyPhone]', err));

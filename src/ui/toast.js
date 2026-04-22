@@ -1,4 +1,5 @@
 // Toast notifications for new char messages while modal is closed.
+import { escapeHtml } from '../util.js';
 
 let container = null;
 const AUTO_DISMISS_MS = 5000;
@@ -10,12 +11,6 @@ function ensureContainer() {
     container.id = 'sillyphone-toast-container';
     document.body.appendChild(container);
     return container;
-}
-
-function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[c]));
 }
 
 export function show({ charName, msgs, onClick }) {

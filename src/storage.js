@@ -2,6 +2,14 @@
 // SMS bursts themselves live in ctx().chat as tagged messages (see chat-sms.js).
 import { ctx } from './st.js';
 
+/**
+ * Persisted rolling-summary cache for the current chat.
+ * @typedef {Object} Summary
+ * @property {string} text
+ * @property {number} coveredUpToIdx
+ * @property {number} generatedAt
+ */
+
 const KEY = 'sillyphone';
 
 function getState() {
@@ -18,10 +26,12 @@ function persist() {
     ctx().saveMetadataDebounced();
 }
 
+/** @returns {number} */
 export function getUnread() {
     return getState().unread || 0;
 }
 
+/** @param {number} [n] */
 export function incUnread(n = 1) {
     const s = getState();
     s.unread = (s.unread || 0) + n;
@@ -34,10 +44,12 @@ export function clearUnread() {
     persist();
 }
 
+/** @returns {Summary | null} */
 export function getSummary() {
     return getState().main_summary;
 }
 
+/** @param {Summary} obj */
 export function setSummary(obj) {
     const s = getState();
     s.main_summary = obj;

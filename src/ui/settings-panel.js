@@ -1,11 +1,9 @@
 // Settings panel mounted into SillyTavern's Extensions drawer.
 import * as settings from '../settings.js';
-import * as storage from '../storage.js';
 import * as badge from './badge.js';
 import * as modal from './modal.js';
 import * as context from '../context.js';
-import * as chatSms from '../chat-sms.js';
-import { ctx, cutChatMessage } from '../st.js';
+import * as commands from '../commands.js';
 
 const MOUNT_SELECTORS = ['#extensions_settings2', '#extensions_settings'];
 
@@ -121,28 +119,14 @@ function wire(panel) {
 
     panel.querySelector('[data-sp-action="clearThread"]').addEventListener('click', async () => {
         if (!confirm('Clear phone thread for this chat?')) return;
-        const bursts = chatSms.listBursts(ctx().chat);
-        for (let i = bursts.length - 1; i >= 0; i--) {
-            // eslint-disable-next-line no-await-in-loop
-            await cutChatMessage(bursts[i].chatIdx);
-        }
-        storage.clearUnread();
-        badge.refresh();
+        await commands.clearThread();
         modal.refresh();
     });
 
     panel.querySelector('[data-sp-action="clearAll"]').addEventListener('click', async () => {
         if (!confirm('Clear ALL phone data (thread + summary) for this chat?')) return;
-        const bursts = chatSms.listBursts(ctx().chat);
-        for (let i = bursts.length - 1; i >= 0; i--) {
-            // eslint-disable-next-line no-await-in-loop
-            await cutChatMessage(bursts[i].chatIdx);
-        }
-        storage.clearUnread();
-        storage.resetSummary();
-        badge.refresh();
+        await commands.clearThread({ alsoSummary: true });
         modal.refresh();
-        context.updateAll();
     });
 
     maybeShowConflict(panel);

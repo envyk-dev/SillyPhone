@@ -65,7 +65,7 @@ test('parse: marker with attachment + msgs', () => {
     const text = '<!--Phone:{"attachment":{"kind":"image","description":"a puppy"},"msgs":["look"]}-->';
     assert.deepEqual(parse(text), {
         msgs: ['look'],
-        attachment: { kind: 'image', description: 'a puppy' },
+        attachment: { kind: 'image', description: 'a puppy', image: null },
     });
 });
 
@@ -73,7 +73,7 @@ test('parse: marker with attachment only (no msgs)', () => {
     const text = '<!--Phone:{"attachment":{"kind":"video","description":"a sunset"}}-->';
     assert.deepEqual(parse(text), {
         msgs: [],
-        attachment: { kind: 'video', description: 'a sunset' },
+        attachment: { kind: 'video', description: 'a sunset', image: null },
     });
 });
 
@@ -102,7 +102,7 @@ test('parse: first attachment wins across multiple markers', () => {
     const text = '<!--Phone:{"attachment":{"kind":"image","description":"a"}}--> '
         + '<!--Phone:{"attachment":{"kind":"image","description":"b"},"msgs":["x"]}-->';
     const r = parse(text);
-    assert.deepEqual(r.attachment, { kind: 'image', description: 'a' });
+    assert.deepEqual(r.attachment, { kind: 'image', description: 'a', image: null });
     assert.deepEqual(r.msgs, ['x']);
 });
 

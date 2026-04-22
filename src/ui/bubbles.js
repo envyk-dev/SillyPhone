@@ -2,6 +2,7 @@
 // - vertical spacing between different speakers' turns is consistent
 // - CSS can round bubble corners based on position within the turn
 // - an optional attachment row sits at the top of the turn
+import { REROLL_ICON } from './icons.js';
 
 const TIMESTAMP_GAP_MS = 5 * 60 * 1000;
 
@@ -133,8 +134,6 @@ export function hideTyping(containerEl) {
     if (t) t.remove();
 }
 
-const REROLL_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>';
-
 // Ensures at most one reroll icon exists, attached to the last char turn,
 // visible only when `enabled`. Called after any thread mutation.
 export function reconcileReroll(containerEl, onClick, enabled) {
@@ -148,7 +147,7 @@ export function reconcileReroll(containerEl, onClick, enabled) {
     btn.className = 'sp-reroll';
     btn.setAttribute('aria-label', 'Regenerate reply');
     btn.title = 'Regenerate reply';
-    btn.innerHTML = REROLL_ICON_SVG;
+    btn.innerHTML = REROLL_ICON;
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (typeof onClick === 'function') onClick();

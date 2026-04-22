@@ -1,8 +1,14 @@
+// @ts-check
 // Extracts and strips <!--Phone:{...}--> markers from AI message text.
 // Also recognizes a leaked bullet-list format ("[SMS]\n- a\n- b") that the
 // model sometimes produces after learning the displayed transcript shape
 // in long chats. parse() falls back to it when no marker is found; strip()
 // always removes it so the host row never carries the raw block.
+import { normalizeAttachment } from './chat-sms.js';
+
+/** @typedef {import('./types.js').Attachment} Attachment */
+/** @typedef {import('./types.js').BubbleTiming} BubbleTiming */
+/** @typedef {import('./types.js').MarkerParseResult} MarkerParseResult */
 
 const MARKER_RE = /<!--Phone:\s*(\{[\s\S]*?\})\s*-->/g;
 
@@ -15,6 +21,10 @@ const LEAKED_BLOCK_RE = /(?:^|\n)[ \t]*\[SMS\][ \t]*(?:\n[ \t]*-[^\n]*)*/g;
 // Strict variant (requires at least one bullet) used only for fallback parsing.
 const LEAKED_BULLETS_RE = /(?:^|\n)[ \t]*\[SMS\][ \t]*((?:\n[ \t]*-[^\n]*)+)/;
 
+/**
+ * @param {string} text
+ * @returns {{ msgs: string[] } | null}
+ */
 function parseLeakedBlock(text) {
     const m = LEAKED_BULLETS_RE.exec(text);
     if (!m) return null;
@@ -27,17 +37,12 @@ function parseLeakedBlock(text) {
     return { msgs };
 }
 
-function normalizeAttachment(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-    const kind = raw.kind;
-    const description = raw.description;
-    if (kind !== 'image' && kind !== 'video') return null;
-    if (typeof description !== 'string' || description.length === 0) return null;
-    return { kind, description };
-}
-
 // Accepts string or {text, delay?, typeDuration?}. Returns {text, timing}
 // where timing is either a normalized object or null (instant default).
+/**
+ * @param {unknown} raw
+ * @returns {{ text: string, timing: BubbleTiming | null } | null}
+ */
 function normalizeBubble(raw) {
     if (typeof raw === 'string') {
         if (raw.length === 0) return null;
@@ -58,6 +63,10 @@ function normalizeBubble(raw) {
     return { text: raw.text, timing: hasAny ? timing : null };
 }
 
+/**
+ * @param {string} text
+ * @returns {MarkerParseResult | null}
+ */
 export function parse(text) {
     if (!text || typeof text !== 'string') return null;
     const msgs = [];
@@ -96,6 +105,10 @@ export function parse(text) {
     return result;
 }
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 export function strip(text) {
     if (!text || typeof text !== 'string') return text;
     return text.replace(MARKER_RE, '').replace(LEAKED_BLOCK_RE, '');

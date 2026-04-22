@@ -6,6 +6,7 @@ import { buildSummarizationPrompt } from './prompt-builder.js';
 import * as storage from './storage.js';
 import * as settings from './settings.js';
 import * as context from './context.js';
+import { shouldTriggerRolling } from './memory-policy.js';
 
 const SUMMARY_THRESHOLD = 10;
 const STALE_DRIFT = 5;
@@ -67,19 +68,15 @@ export async function ensureFresh() {
 
 export async function checkRollingTrigger() {
     const rm = settings.get('rollingMemory');
-    if (!rm || !rm.enabled) return;
     const chat = getChat();
-
     const len = chat.length;
-    const hiddenUpTo = len - (rm.keepRecent || 10);
-    if (hiddenUpTo <= 0) return;
-    if (len === lastTriggerLen) return;
-    if (len % (rm.every || 10) !== 0) return;
+    if (!shouldTriggerRolling(len, rm, lastTriggerLen)) return;
     lastTriggerLen = len;
 
     await ensureFresh();
     if (!storage.getSummary()) return;
 
+    const hiddenUpTo = len - (rm.keepRecent || 10);
     try {
         await runSlashCommand(`/hide 0-${hiddenUpTo - 1}`);
     } catch (err) {

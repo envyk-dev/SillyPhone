@@ -1,13 +1,18 @@
 // Global extension settings — stored in ctx().extensionSettings.
+// Migration logic lives in settings-migrate.js (pure, testable under node).
 import { ctx } from './st.js';
 import {
     DEFAULT_FLOW_A_INSTRUCTIONS,
     DEFAULT_SUMMARIZATION_PROMPT,
 } from './prompt-builder.js';
+import { migrate, CURRENT_VERSION } from './settings-migrate.js';
+
+/** @typedef {import('./types.js').SillyPhoneSettings} SillyPhoneSettings */
 
 const KEY = 'sillyphone';
 
 const DEFAULTS = {
+    version: CURRENT_VERSION,
     enabled: true,
     smsOnly: false,
     showBadge: true,
@@ -31,74 +36,18 @@ function persist() {
     ctx().saveSettingsDebounced();
 }
 
-// Fingerprint snippets from previous default Flow A instructions. If the user's
-// saved value still contains any of these, they never customized it — upgrade
-// them to the current DEFAULT_FLOW_A_INSTRUCTIONS so the fix actually takes
-// effect in live testing. Customized prompts (no fingerprint match) are left
-// untouched.
-const OLD_FLOW_A_FINGERPRINTS = [
-    // v0.2.x / early-v0.3 defaults
-    'HISTORICAL phone conversation reference',
-    'NEVER duplicate, echo, or near-duplicate',
-    'duplicate, echo, or near-duplicate any message that already appears',
-    'from where the phone state leaves off',
-    // v0.3.x default — replaced in v0.4.0 rearchitecture (SMS-as-chat-messages).
-    // These users were still on the big-block-inject design.
-    'Phone conversation log',
-    'Use it sparingly — for later-beats',
-    'flirty check-ins',
-    'reply via the marker, ignore it in-character',
-    // v0.4.x default — replaced in v0.5.0 with per-bubble timing docs.
-    // Distinctive phrases that only existed in the v0.4 Flow A default.
-    'holding up a coffee mug, slightly out of focus',
-    'briefly narrate the act of texting or sending',
-];
-
-// Additional fingerprint: v0.4 users who never customized but ALSO don't
-// match any old-phrase fingerprint can be detected by the absence of the
-// new timing section. We only trigger this path when the value still looks
-// like a default (has the marker example AND the rules list) but lacks the
-// timing docs. This avoids clobbering customized prompts.
-function v04DefaultMissingTiming(value) {
-    if (typeof value !== 'string' || !value) return false;
-    const looksLikeDefault = value.includes('<!--Phone:{"msgs":["text1","text2"]}-->')
-        && value.includes('Phone / SMS system (SillyPhone extension)')
-        && value.includes('Previous SMS in this conversation already appear');
-    const hasTimingDocs = value.includes('typeDuration');
-    return looksLikeDefault && !hasTimingDocs;
-}
-
-// v0.5 → v0.6: added a small example exchange after the timing docs.
-// Looks-like-default, has timing, but lacks the example block.
-function v05DefaultMissingExample(value) {
-    if (typeof value !== 'string' || !value) return false;
-    const looksLikeDefault = value.includes('<!--Phone:{"msgs":["text1","text2"]}-->')
-        && value.includes('Phone / SMS system (SillyPhone extension)')
-        && value.includes('typeDuration');
-    const hasExample = value.includes('Example exchange');
-    return looksLikeDefault && !hasExample;
-}
-
-// v0.6 → v0.7: added an "Output format ≠ history format" DO/DON'T section
-// so models that drift to emitting the display format get corrected.
-function v06DefaultMissingOutputFormat(value) {
-    if (typeof value !== 'string' || !value) return false;
-    const looksLikeDefault = value.includes('<!--Phone:{"msgs":["text1","text2"]}-->')
-        && value.includes('Phone / SMS system (SillyPhone extension)')
-        && value.includes('Example exchange');
-    const hasOutputFormat = value.includes('Output format ≠ history format');
-    return looksLikeDefault && !hasOutputFormat;
-}
-
-function isLikelyStaleDefaultFlowA(value) {
-    if (typeof value !== 'string' || !value) return false;
-    for (const fp of OLD_FLOW_A_FINGERPRINTS) {
-        if (value.includes(fp)) return true;
+// Fill any keys the saved blob is missing (new settings added across
+// versions). Separate from migration, which transforms existing keys.
+function hydrate(s) {
+    for (const [k, v] of Object.entries(DEFAULTS)) {
+        if (s[k] === undefined) {
+            s[k] = structuredClone(v);
+        } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+            for (const [ik, iv] of Object.entries(v)) {
+                if (s[k][ik] === undefined) s[k][ik] = iv;
+            }
+        }
     }
-    if (v04DefaultMissingTiming(value)) return true;
-    if (v05DefaultMissingExample(value)) return true;
-    if (v06DefaultMissingOutputFormat(value)) return true;
-    return false;
 }
 
 function ensureInitialized() {
@@ -109,50 +58,48 @@ function ensureInitialized() {
         return;
     }
     const s = store[KEY];
-    for (const [k, v] of Object.entries(DEFAULTS)) {
-        if (s[k] === undefined) {
-            s[k] = structuredClone(v);
-        } else if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
-            for (const [ik, iv] of Object.entries(v)) {
-                if (s[k][ik] === undefined) s[k][ik] = iv;
-            }
-        }
-    }
-    // One-shot migration: if flowAInstructions still carries any of the old
-    // default fingerprints, replace with the current default. See comment on
-    // OLD_FLOW_A_FINGERPRINTS above.
-    if (isLikelyStaleDefaultFlowA(s.flowAInstructions)) {
-        s.flowAInstructions = DEFAULTS.flowAInstructions;
-    }
-    // Rename: fastSms → smsOnly (only lived on dev, but a few testers flipped it).
-    if (s.fastSms !== undefined) {
-        if (s.smsOnly === undefined) s.smsOnly = s.fastSms;
-        delete s.fastSms;
-    }
-    persist();
+    hydrate(s);
+    const migrated = migrate(s, DEFAULT_FLOW_A_INSTRUCTIONS);
+    if (migrated) persist();
 }
 
 export function init() {
     ensureInitialized();
 }
 
+/**
+ * @template {keyof SillyPhoneSettings} K
+ * @param {K} key
+ * @returns {SillyPhoneSettings[K]}
+ */
 export function get(key) {
     ensureInitialized();
     return getStore()[KEY][key];
 }
 
+/**
+ * @template {keyof SillyPhoneSettings} K
+ * @param {K} key
+ * @param {SillyPhoneSettings[K]} value
+ */
 export function set(key, value) {
     ensureInitialized();
     getStore()[KEY][key] = value;
     persist();
 }
 
+/**
+ * @param {string} key
+ * @param {string} subKey
+ * @param {unknown} value
+ */
 export function setNested(key, subKey, value) {
     ensureInitialized();
     getStore()[KEY][key][subKey] = value;
     persist();
 }
 
+/** @returns {SillyPhoneSettings} */
 export function getAll() {
     ensureInitialized();
     return getStore()[KEY];
