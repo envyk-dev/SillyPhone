@@ -227,10 +227,7 @@ async function handleReroll() {
 function init() {
     try {
         settings.init();
-        // Blend iOS PWA status bar into the phone modal chrome. ST ships
-        // #333 in index.html — we take it to pure black so the bar doesn't
-        // clash with the near-black phone header on mobile standalone.
-        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#000000');
+        lockStatusBarBlack();
         modal.mount({ onSend: handleSend, onReroll: handleReroll });
         modal.setCharInfo(currentCharName());
         badge.mount(openPhone);
@@ -252,6 +249,24 @@ function init() {
     } catch (err) {
         console.error('[SillyPhone] init failed', err);
     }
+}
+
+// Pin the iOS PWA status bar to black so it blends with the phone modal
+// chrome. ST's power-user.js rewrites <meta name="theme-color"> to the
+// active theme's "Blur Tint" color on every theme apply — this observer
+// wins the race and snaps it back. `content`-attribute filter keeps the
+// callback narrow; the TARGET check prevents an infinite loop when our
+// own set fires the observer.
+function lockStatusBarBlack() {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) return;
+    const TARGET = '#000000';
+    meta.setAttribute('content', TARGET);
+    new MutationObserver(() => {
+        if (meta.getAttribute('content') !== TARGET) {
+            meta.setAttribute('content', TARGET);
+        }
+    }).observe(meta, { attributes: true, attributeFilter: ['content'] });
 }
 
 // Poll via rAF until SillyTavern.getContext is available, then init().
