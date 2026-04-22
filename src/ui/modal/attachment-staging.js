@@ -3,11 +3,12 @@
 // The shell reads .get() when building the send payload and calls .clear()
 // after the send completes.
 import { escapeHtml } from '../../util.js';
-import { showSheet } from './sheet.js';
+import { showPopover } from './popover.js';
 
 let chipEl = null;
 let inputEl = null;
 let sheetHost = null;
+let triggerEl = null;
 let isBlocked = () => false;
 let staged = null;
 
@@ -15,6 +16,7 @@ export function init(deps) {
     chipEl = deps.chipEl;
     inputEl = deps.inputEl;
     sheetHost = deps.sheetHost;
+    triggerEl = deps.triggerEl;
     isBlocked = deps.isBlocked || (() => false);
 }
 
@@ -47,7 +49,8 @@ export function render() {
 
 export function openMenu() {
     if (isBlocked()) return;
-    showSheet(sheetHost, [
+    if (!triggerEl) return;
+    showPopover(sheetHost, triggerEl, [
         { label: 'Send image', icon: '📷', action: () => promptDescription('image') },
         { label: 'Send video', icon: '🎥', action: () => promptDescription('video') },
     ]);

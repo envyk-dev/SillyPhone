@@ -46,8 +46,14 @@ function attachmentPlaceholder(attachment, from) {
     const el = document.createElement('div');
     el.className = `sp-attachment-placeholder sp-attachment-placeholder-${from === 'user' ? 'user' : 'char'} sp-attachment-${attachment.kind}`;
     const icon = attachment.kind === 'video' ? '🎥' : '📷';
-    const label = attachment.kind === 'video' ? 'video' : 'image';
-    el.textContent = `${icon} ${label} attachment`;
+    const label = attachment.kind === 'video' ? 'Video' : 'Image';
+    const iconEl = document.createElement('span');
+    iconEl.className = 'sp-attachment-placeholder-icon';
+    iconEl.textContent = icon;
+    const labelEl = document.createElement('span');
+    labelEl.className = 'sp-attachment-placeholder-label';
+    labelEl.textContent = label;
+    el.append(iconEl, labelEl);
     return el;
 }
 

@@ -8,11 +8,11 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: #0a84ff;
+    background: linear-gradient(135deg, #6366f1, #bc72f4);
     color: white;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.5);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
     z-index: 2147483646;
     display: flex;
     align-items: center;
@@ -95,7 +95,7 @@
 .sp-toast-name {
     font-size: 12px;
     font-weight: 600;
-    color: #0a84ff;
+    color: #8b5cf6;
     margin-bottom: 3px;
 }
 
@@ -143,7 +143,8 @@
 }
 
 .sp-modal-inner {
-    background: #1c1c1e;
+    position: relative;
+    background: #0a0a0c;
     color: white;
     width: 100%;
     height: 100%;
@@ -169,10 +170,10 @@
 .sp-modal-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    background: #323234;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+    gap: 12px;
+    padding: 11px 14px;
+    background: linear-gradient(180deg, #1a1a1c 0%, #0a0a0c 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .sp-modal-header button {
@@ -181,13 +182,16 @@
     border: none;
     font-size: 18px;
     cursor: pointer;
-    padding: 6px 10px;
+    padding: 6px 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
 .sp-modal-header button[hidden] { display: none; }
+
+.sp-modal-menu { color: #8e8e93; font-size: 22px; padding: 6px 8px; }
+.sp-modal-menu:hover { color: #fff; }
 
 .sp-modal-trash { color: #ff453a; }
 .sp-modal-trash:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -198,21 +202,81 @@
     display: block;
 }
 
-.sp-modal-name {
+/* Avatar circle with presence dot. The fallback span renders the contact's
+   first initial when no avatar URL resolves. */
+.sp-modal-avatar {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+}
+
+.sp-modal-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.sp-modal-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #bc72f4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.sp-modal-avatar-img[hidden],
+.sp-modal-avatar-fallback[hidden] { display: none; }
+
+.sp-modal-avatar-presence {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #34c759;
+    border: 2px solid #0a0a0c;
+}
+
+.sp-modal-name-block {
     flex: 1;
+    min-width: 0;
+    line-height: 1.15;
+    text-align: left;
+}
+
+.sp-modal-name {
     font-weight: 600;
-    font-size: 18px;
-    text-align: center;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sp-modal-status {
+    font-size: 11.5px;
+    color: #8e8e93;
+    margin-top: 2px;
 }
 
 /* ---------- Messages area ---------- */
 .sp-modal-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 14px 10px;
+    padding: 16px 12px;
     display: flex;
     flex-direction: column;
-    gap: 16px; /* space between turn groups */
+    gap: 14px; /* space between turn groups */
+    background: #0a0a0c;
 }
 
 /* Turn container wraps all bubbles from a single speaker in a burst */
@@ -238,13 +302,14 @@
 }
 
 .sp-bubble-char {
-    background: #3a3a3c;
-    color: white;
+    background: #1f1f23;
+    color: #f3f3f5;
 }
 
 .sp-bubble-user {
-    background: #0a84ff;
-    color: white;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6 60%, #bc72f4);
+    color: #fff;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
 /* iOS-style grouping: flatten the corners that face adjacent bubbles in the same turn.
@@ -312,66 +377,88 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 10px;
-    border-top: 1px solid #2c2c2e;
-    background: #2a2a2c;
+    padding: 12px 12px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    background: #0a0a0c;
+}
+
+/* The pill wraps the textarea + send arrow as a single visual unit.
+   Bordered surface, send button hugs the right edge. */
+.sp-input-pill {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: #1a1a1c;
+    border: 1px solid #27272a;
+    border-radius: 20px;
+    padding: 4px 4px 4px 14px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    transition: border-color 0.15s ease;
+}
+
+.sp-input-pill:focus-within {
+    border-color: rgba(139, 92, 246, 0.6);
 }
 
 .sp-modal-input textarea {
-    flex: 1;
-    background: #3a3a3c;
+    flex: 1 1 auto;
+    min-width: 0;
+    background: transparent;
     color: white;
     border: none;
-    border-radius: 18px;
-    padding: 10px 14px;
+    padding: 6px 0;
     font-size: 14px;
     resize: none;
     font-family: inherit;
     max-height: 120px;
 }
 
-.sp-modal-input textarea:focus { outline: 2px solid #0a84ff; }
+.sp-modal-input textarea:focus { outline: none; }
 
-/* Scoped to .sp-input-row so the chip's clear button doesn't inherit this
-   (it's inside .sp-attachment-chip, sibling of .sp-input-row). */
 .sp-input-row button {
-    background: #0a84ff;
+    background: transparent;
     color: white;
     border: none;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    padding: 0;
     cursor: pointer;
-    font-size: 16px;
+    padding: 0;
     flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-/* Send button is a wider pill, not a circle. */
-.sp-input-row button[type="submit"] {
-    width: 56px;
-    border-radius: 19px;
+.sp-send-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #bc72f4) !important;
+    color: white !important;
+    margin-bottom: 1px;
 }
 
-.sp-input-row button:disabled {
-    opacity: 0.5;
+.sp-send-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.sp-send-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.sp-send-btn:disabled {
+    opacity: 0.45;
     cursor: not-allowed;
+    filter: saturate(0.6);
 }
 
-/* Lock the textarea single-row height to match the button height (38px)
-   so plus + input + send all share the same baseline. Grows from there
-   when the user types multi-line, capped by the existing max-height. */
 .sp-input-row textarea {
-    min-height: 38px;
+    min-height: 30px;
     box-sizing: border-box;
 }
 
 .sp-modal-input textarea:disabled {
     opacity: 0.5;
 }
+
+.sp-modal-input textarea::placeholder { color: #6e6e73; }
 
 @media (max-width: 600px) {
     .sp-modal-input {
@@ -463,6 +550,79 @@
     to   { transform: translateY(0); }
 }
 
+/* ---------- Anchored popover (small action menu) ----------
+   Used for the attachment menu above the + button. Same item shape as
+   the bottom sheet, different placement: floats above its trigger with
+   a click-anywhere backdrop to dismiss. Extensible — drop more
+   showPopover() calls in for future menus (settings, etc). */
+.sp-popover {
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+}
+
+.sp-popover-backdrop {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+}
+
+.sp-popover-menu {
+    position: absolute;
+    background: #1a1a1c;
+    border: 1px solid #27272a;
+    border-radius: 12px;
+    min-width: 180px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    transform-origin: bottom left;
+    animation: sp-popover-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sp-popover-btn {
+    background: transparent;
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.1s;
+}
+
+.sp-popover-btn:hover,
+.sp-popover-btn:active {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.sp-popover-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.sp-popover-icon svg { display: block; }
+
+.sp-popover-destructive { color: #ff453a; }
+.sp-popover-destructive .sp-popover-icon { color: #ff453a; }
+
+@keyframes sp-popover-in {
+    from { opacity: 0; transform: scale(0.92) translateY(4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 /* ---------- Manage mode (multi-select delete) ---------- */
 .sp-manage-mode .sp-bubble {
     cursor: pointer;
@@ -496,8 +656,8 @@
 
 .sp-manage-mode .sp-bubble.sp-selected::before {
     content: "✓";
-    background: #0a84ff;
-    border-color: #0a84ff;
+    background: #8b5cf6;
+    border-color: #8b5cf6;
 }
 
 .sp-manage-mode .sp-bubble:active {
@@ -532,14 +692,13 @@
 @media (max-width: 480px) {
     .sp-modal-inner { max-width: none; }
 }
-.sp-modal-header button { font-size: 20px; }
-.sp-modal-input button { font-size: 18px; }
+.sp-modal-close { font-size: 20px; }
 
 /* ---------- Input row + attachment button/chip ---------- */
 .sp-input-row {
     display: flex;
-    align-items: end;
-    gap: 6px;
+    align-items: center;
+    gap: 0;
     width: 100%;
 }
 .sp-input-row textarea {
@@ -548,13 +707,13 @@
 }
 .sp-attachment-btn {
     flex: 0 0 auto;
-    background: #0a84ff;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
     border: none;
     color: white;
     cursor: pointer;
     padding: 0;
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     font-weight: 600;
     font-size: 18px;
@@ -563,20 +722,20 @@
     justify-content: center;
     line-height: 1;
 }
-.sp-attachment-btn:hover:not(:disabled) { filter: brightness(1.1); }
-.sp-attachment-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sp-attachment-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.sp-attachment-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: saturate(0.6); }
 
 .sp-attachment-chip {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    margin: 6px 8px 10px 8px;
-    background: rgba(80, 140, 255, 0.15);
-    border: 1px solid rgba(80, 140, 255, 0.25);
+    margin: 0 4px 8px 4px;
+    background: rgba(139, 92, 246, 0.16);
+    border: 1px solid rgba(139, 92, 246, 0.3);
     border-radius: 14px;
     font-size: 12px;
-    max-width: calc(100% - 16px);
+    max-width: calc(100% - 8px);
 }
 .sp-attachment-chip[hidden] { display: none; }
 .sp-attachment-chip-icon { flex: 0 0 auto; }
@@ -602,20 +761,75 @@
 }
 .sp-attachment-chip-clear:hover { opacity: 1; }
 
-/* ---------- Attachment placeholder inside bubbles (modal) ---------- */
+/* ---------- Attachment placeholder inside bubbles (modal) ----------
+   Photo-card frame: 4:3, fixed 200px width. Acts as a permanent frame —
+   when a future patch swaps in a real <img>, the frame stays the same
+   size. Inner icon+label are the "no image" state; replace by stuffing
+   an <img> inside the same element. */
 .sp-attachment-placeholder {
-    padding: 10px 14px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.08);
-    font-size: 13px;
-    opacity: 0.85;
-    margin-bottom: 2px;
+    width: 200px;
+    aspect-ratio: 4 / 3;
+    border-radius: 16px;
     align-self: flex-start;
-    max-width: 80%;
+    margin-bottom: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.04), transparent 60%),
+        #1a1a1e;
+    border: 1px solid #27272a;
+    box-sizing: border-box;
 }
 .sp-attachment-placeholder-user {
     align-self: flex-end;
-    background: rgba(80, 200, 140, 0.15);
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.12), transparent 60%),
+        linear-gradient(135deg, #6366f1, #8b5cf6 60%, #bc72f4);
+    border: none;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+.sp-attachment-placeholder-icon {
+    font-size: 36px;
+    opacity: 0.9;
+    line-height: 1;
+}
+.sp-attachment-placeholder-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 600;
+    line-height: 1;
+}
+.sp-attachment-placeholder:not(.sp-attachment-placeholder-user) .sp-attachment-placeholder-label {
+    color: #8e8e93;
+}
+/* Future image swap: drop an <img> inside the placeholder. The frame
+   sheds its fixed 4:3 / 200px constraint and grows to the image's
+   natural aspect ratio (capped at 270×360 — IM-app conventions).
+   Sheen background is dropped so the photo isn't tinted. */
+.sp-attachment-placeholder:has(img),
+.sp-attachment-placeholder-user:has(img) {
+    width: auto;
+    aspect-ratio: auto;
+    max-width: 270px;
+    max-height: 360px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+.sp-attachment-placeholder img {
+    display: block;
+    max-width: 100%;
+    max-height: 360px;
+    width: auto;
+    height: auto;
 }
 .sp-manage-mode .sp-attachment-placeholder {
     cursor: pointer;
@@ -644,8 +858,8 @@
 .sp-manage-mode .sp-attachment-placeholder:not(.sp-attachment-placeholder-user)::before { left: calc(100% + 10px); }
 .sp-manage-mode .sp-attachment-placeholder.sp-selected::before {
     content: "✓";
-    background: #0a84ff;
-    border-color: #0a84ff;
+    background: #8b5cf6;
+    border-color: #8b5cf6;
 }
 
 /* SMS rows in the MAIN SillyTavern chat log are hidden by default — users
@@ -661,7 +875,7 @@ body:not(.sp-show-sms-rows) .mes.sp-chat-sms {
 /* Active-state tint for the wand-menu toggle so the on/off state reads at a
    glance even without the icon swap. */
 #sillyphone-show-sms-rows.sp-menu-active .sp-menu-icon {
-    color: #0a84ff;
+    color: #8b5cf6;
 }
 
 /* ---------- Reroll icon (appended to last char turn) ---------- */

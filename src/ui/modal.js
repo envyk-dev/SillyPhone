@@ -21,6 +21,9 @@ let closeBtn = null;
 let menuBtn = null;
 let trashBtn = null;
 let attachBtn = null;
+let avatarImgEl = null;
+let avatarFallbackEl = null;
+let statusEl = null;
 let onSendHandler = null;
 let onRerollHandler = null;
 let charName = 'Contact';
@@ -40,7 +43,15 @@ export function mount({ onSend, onReroll }) {
         <div class="sp-modal-inner">
             <header class="sp-modal-header">
                 <button class="sp-modal-close" aria-label="Close phone">${BACK_ICON}</button>
-                <div class="sp-modal-name"></div>
+                <div class="sp-modal-avatar">
+                    <img class="sp-modal-avatar-img" alt="" hidden>
+                    <span class="sp-modal-avatar-fallback"></span>
+                    <span class="sp-modal-avatar-presence"></span>
+                </div>
+                <div class="sp-modal-name-block">
+                    <div class="sp-modal-name"></div>
+                    <div class="sp-modal-status">Active now</div>
+                </div>
                 <button class="sp-modal-menu" aria-label="Menu">⋮</button>
                 <button class="sp-modal-trash" aria-label="Delete selected" hidden disabled>${TRASH_ICON}</button>
             </header>
@@ -49,8 +60,10 @@ export function mount({ onSend, onReroll }) {
                 <div class="sp-attachment-chip" hidden></div>
                 <div class="sp-input-row">
                     <button type="button" class="sp-attachment-btn" aria-label="Add attachment">${PLUS_ICON}</button>
-                    <textarea placeholder="Type a message... (line = bubble)" rows="1" aria-label="Message input"></textarea>
-                    <button type="submit" aria-label="Send">${SEND_ICON}</button>
+                    <div class="sp-input-pill">
+                        <textarea placeholder="Type a message... (line = bubble)" rows="1" aria-label="Message input"></textarea>
+                        <button type="submit" class="sp-send-btn" aria-label="Send">${SEND_ICON}</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -64,6 +77,9 @@ export function mount({ onSend, onReroll }) {
     menuBtn = modalEl.querySelector('.sp-modal-menu');
     trashBtn = modalEl.querySelector('.sp-modal-trash');
     attachBtn = modalEl.querySelector('.sp-attachment-btn');
+    avatarImgEl = modalEl.querySelector('.sp-modal-avatar-img');
+    avatarFallbackEl = modalEl.querySelector('.sp-modal-avatar-fallback');
+    statusEl = modalEl.querySelector('.sp-modal-status');
     const attachmentChipEl = modalEl.querySelector('.sp-attachment-chip');
 
     manageMode.init({
@@ -75,6 +91,7 @@ export function mount({ onSend, onReroll }) {
         chipEl: attachmentChipEl,
         inputEl,
         sheetHost: modalEl,
+        triggerEl: attachBtn,
         isBlocked: manageMode.isActive,
     });
 
@@ -137,6 +154,39 @@ export function setCharInfo(name) {
     charName = name || 'Contact';
     if (!modalEl) return;
     modalEl.querySelector('.sp-modal-name').textContent = charName;
+    applyAvatar();
+    setStatus('Active now');
+}
+
+function applyAvatar() {
+    if (!avatarImgEl || !avatarFallbackEl) return;
+    avatarFallbackEl.textContent = (charName?.[0] || '?').toUpperCase();
+    let url = null;
+    try {
+        const c = ctx();
+        const file = c.characters?.[c.characterId]?.avatar;
+        if (file && typeof c.getThumbnailUrl === 'function') {
+            url = c.getThumbnailUrl('avatar', file);
+        }
+    } catch { /* ctx not ready, fall back to initial */ }
+    if (url) {
+        avatarImgEl.src = url;
+        avatarImgEl.hidden = false;
+        avatarFallbackEl.hidden = true;
+    } else {
+        avatarImgEl.hidden = true;
+        avatarImgEl.removeAttribute('src');
+        avatarFallbackEl.hidden = false;
+    }
+}
+
+// Update the small "Active now" / "typing..." line under the contact name.
+// No-op while in manage mode — the status row visually stays put but the
+// state would be misleading.
+function setStatus(text) {
+    if (!statusEl) return;
+    if (manageMode.isActive()) return;
+    statusEl.textContent = text;
 }
 
 export function open() {
@@ -200,12 +250,14 @@ export function setRerollInFlight(on) {
 export function showTyping() {
     if (!modalEl || !isOpen() || manageMode.isActive()) return;
     bubbles.showTyping(messagesEl);
+    setStatus('typing…');
     reconcileRerollIcon();
 }
 
 export function hideTyping() {
     if (!modalEl) return;
     bubbles.hideTyping(messagesEl);
+    setStatus('Active now');
     reconcileRerollIcon();
 }
 

@@ -244,7 +244,7 @@ function init() {
         context.updateAll();
         rowObserver.start();
         rowObserver.styleAllTaggedRows();
-        console.log('[SillyPhone] loaded v0.7.0');
+        console.log('[SillyPhone] loaded v0.8.0');
     } catch (err) {
         console.error('[SillyPhone] init failed', err);
     }
