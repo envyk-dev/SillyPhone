@@ -160,7 +160,10 @@ function submitInput() {
     if (sendBtn.disabled) return;
     const payload = { text, attachment };
     inputEl.value = '';
-    attachmentStaging.clear();
+    // reset() — not discard() — because the uploaded file on disk is now
+    // owned by the committed burst. discard() would delete it out from
+    // under the <img src> that's about to point at it.
+    attachmentStaging.reset();
     autoGrow();
     if (onSendHandler) onSendHandler(payload);
 }
@@ -220,6 +223,10 @@ export function close() {
     dismissPopover(modalEl);
     dismissSettingsSheet(modalEl);
     manageMode.exit();
+    // Drop any unsent staged attachment. Without this, closing the phone
+    // (or ST's chat_changed event, which routes through here) leaves the
+    // uploaded file on disk with nothing referencing it.
+    attachmentStaging.discard();
     modalEl.style.display = 'none';
 }
 

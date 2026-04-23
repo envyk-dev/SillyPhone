@@ -84,8 +84,8 @@ export function formatBurstMes(msgs, attachment) {
 /**
  * Build a chat-message object tagged as an SMS burst. Not pushed — caller
  * decides when to append to ctx().chat so tests and runtime can share logic.
- * The `image` slot on attachments is reserved for a future upload feature;
- * this code always stores null there regardless of what callers pass.
+ * Attachment `image` (when present) is the relative URL path of an uploaded
+ * file; it's kept out of `mes` so the LLM sees only the description.
  * @param {Object} args
  * @param {'user'|'char'} args.from
  * @param {string[]} args.msgs
@@ -119,8 +119,11 @@ export function buildBurstMessage({ from, msgs, ts, charName, userName, attachme
 
 /**
  * Canonical attachment shape used across modules (marker.parse, burst rows,
- * UI bubbles). `image` is reserved for a future upload feature and currently
- * always null.
+ * UI bubbles). `image` holds the relative URL path of an uploaded file when
+ * present (image-kind only), null otherwise. Marker-parsed attachments
+ * (char-initiated) can't carry an image path — the model has no way to
+ * upload files — so the string path only ever reaches this function from
+ * local user-initiated stages and stored tags.
  * @param {unknown} a
  * @returns {Attachment | null}
  */
@@ -130,7 +133,12 @@ export function normalizeAttachment(a) {
     const description = a.description;
     if (kind !== 'image' && kind !== 'video') return null;
     if (typeof description !== 'string' || description.length === 0) return null;
-    return { kind, description, image: null };
+    // `image` is a relative URL path (e.g. "user/images/Alice/sp_k2m8x.jpg")
+    // to an uploaded still. Video-kind attachments carry a still here too —
+    // it's the thumbnail shown with a play overlay (videos don't actually
+    // play; the still stands in for one).
+    const image = (typeof a.image === 'string' && a.image.length > 0) ? a.image : null;
+    return { kind, description, image };
 }
 
 /**
@@ -166,17 +174,27 @@ export function parseBurstMes(text) {
 export function rebuildBurstFromMes(chatMsg) {
     const tag = chatMsg?.extra?.sillyphone;
     if (!tag) return { action: 'noop' };
-    const { msgs, attachment } = parseBurstMes(chatMsg.mes || '');
-    if (msgs.length === 0 && !attachment) return { action: 'remove' };
+    const parsed = parseBurstMes(chatMsg.mes || '');
+    let attachment = parsed.attachment || null;
+    // Image bytes live outside `mes` (on disk, path in extra.sillyphone).
+    // parseBurstMes rebuilds attachment from text only, so image is always
+    // null on its output. Inherit the prior tag's image when the kind still
+    // matches — an edit to the description line shouldn't nuke the file.
+    // Dropping the attachment line entirely still drops the image binding;
+    // the caller is responsible for deleting the orphan file.
+    if (attachment && tag.attachment && tag.attachment.kind === attachment.kind && tag.attachment.image) {
+        attachment = { ...attachment, image: tag.attachment.image };
+    }
+    if (parsed.msgs.length === 0 && !attachment) return { action: 'remove' };
     const nextTag = {
         from: tag.from,
         ts: tag.ts,
-        msgs,
+        msgs: parsed.msgs,
         ...(attachment ? { attachment } : {}),
     };
     const updated = {
         ...chatMsg,
-        mes: formatBurstMes(msgs, attachment || null),
+        mes: formatBurstMes(parsed.msgs, attachment || null),
         extra: { ...chatMsg.extra, sillyphone: nextTag },
     };
     return { action: 'update', msg: updated };

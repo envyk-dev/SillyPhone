@@ -14,6 +14,7 @@ import * as extensionsMenu from './src/ui/extensions-menu.js';
 import * as rowObserver from './src/row-observer.js';
 import * as events from './src/events.js';
 import { cleanHostProse, splitUserInput } from './src/host-prose.js';
+import { deleteImage } from './src/image-upload.js';
 
 let lastParsedKey = null;
 
@@ -157,9 +158,14 @@ async function handleMessageEdited(messageIdx) {
     if (!Number.isInteger(idx) || !Array.isArray(chat) || !chat[idx]) return;
     const msg = chat[idx];
     if (!msg.extra?.sillyphone) return;
+    const oldImage = msg.extra.sillyphone.attachment?.image || null;
     const r = chatSms.rebuildBurstFromMes(msg);
+    const newImage = r.action === 'update' ? (r.msg.extra?.sillyphone?.attachment?.image || null) : null;
     if (r.action === 'update') replaceChatMessage(idx, r.msg);
     else if (r.action === 'remove') await cutChatMessage(idx);
+    // If the edit dropped the attachment line (or changed kind), the file
+    // is now orphaned — clean it up.
+    if (oldImage && oldImage !== newImage) deleteImage(oldImage);
     modal.refresh();
     badge.refresh();
 }
@@ -244,7 +250,7 @@ function init() {
         context.updateAll();
         rowObserver.start();
         rowObserver.styleAllTaggedRows();
-        console.log('[SillyPhone] loaded v0.8.0');
+        console.log('[SillyPhone] loaded v0.9.0');
     } catch (err) {
         console.error('[SillyPhone] init failed', err);
     }

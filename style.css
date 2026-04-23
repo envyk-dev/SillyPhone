@@ -852,11 +852,15 @@
 .sp-attachment-btn:hover:not(:disabled) { filter: brightness(1.12); }
 .sp-attachment-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: saturate(0.6); }
 
+/* Chip variant C: 40px thumbnail (real image, or kind emoji as fallback) +
+   stacked heading/description. Photo-first framing, reads like modern IM
+   drafts. When no file is picked, the thumb slot holds the kind emoji at
+   matching size. */
 .sp-attachment-chip {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    gap: 10px;
+    padding: 6px 10px;
     margin: 0 4px 8px 4px;
     background: rgba(139, 92, 246, 0.16);
     border: 1px solid rgba(139, 92, 246, 0.3);
@@ -865,12 +869,48 @@
     max-width: calc(100% - 8px);
 }
 .sp-attachment-chip[hidden] { display: none; }
-.sp-attachment-chip-icon { flex: 0 0 auto; }
-.sp-attachment-chip-label {
+.sp-attachment-chip-thumb-img {
+    position: relative;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: cover;
+    object-position: center;
+    background-color: #1c1c1f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+/* Icon fallback sits on a <div>, not an <img>, so it keeps the gradient
+   background + emoji text. The shared .sp-attachment-chip-thumb-img class
+   already provides the 40×40 frame. */
+.sp-attachment-chip-thumb-icon {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6 60%, #ad72f4);
+    font-size: 18px;
+}
+.sp-attachment-chip-text {
     flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+}
+.sp-attachment-chip-heading {
+    font-size: 12px;
+    font-weight: 600;
+    color: #bda8f8;
+    line-height: 1.2;
+}
+.sp-attachment-chip-desc {
+    font-size: 11px;
+    color: #8e8e93;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.2;
 }
 .sp-attachment-chip-clear {
     flex: 0 0 auto;
@@ -878,13 +918,15 @@
     border: none;
     cursor: pointer;
     color: inherit;
-    font-size: 12px;
+    font-size: 14px;
     padding: 0 2px;
     width: auto;
     height: auto;
     border-radius: 0;
     line-height: 1;
     opacity: 0.6;
+    align-self: flex-start;
+    margin-top: 2px;
 }
 .sp-attachment-chip-clear:hover { opacity: 1; }
 
@@ -945,16 +987,39 @@
 .sp-attachment-placeholder.sp-attachment-open {
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.7);
 }
-/* Future image swap: drop an <img> inside the placeholder. The frame
-   sheds its fixed 4:3 / 200px constraint and grows to the image's
-   natural aspect ratio (capped at 270×360 — IM-app conventions).
-   Sheen background is dropped so the photo isn't tinted. */
+/* Video-kind attachments carry an image still as the thumbnail; a centered
+   play-icon overlay signals that it's meant to read as a video, not a
+   regular image. Same rule covers both the in-thread bubble card and the
+   pre-send chip thumb. Scoped to `:has(img)` so the emoji fallback (no
+   upload yet) stays visually untouched. */
+.sp-attachment-placeholder.sp-attachment-video:has(img)::after,
+.sp-attachment-chip-thumb-img.sp-attachment-video:has(img)::after {
+    content: '▶';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-42%, -50%);
+    color: white;
+    font-size: 28px;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+    line-height: 1;
+}
+.sp-attachment-chip-thumb-img.sp-attachment-video:has(img)::after {
+    font-size: 14px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Real-image render: an <img> inside the placeholder. The frame sheds its
+   fixed 4:3 / 200px constraint and grows to the image's natural aspect
+   ratio, capped at 220×280 so photos stay chat-shaped and don't dominate
+   the thread. Sheen background is dropped so the photo isn't tinted. */
 .sp-attachment-placeholder:has(img),
 .sp-attachment-placeholder-user:has(img) {
     width: auto;
     aspect-ratio: auto;
-    max-width: 270px;
-    max-height: 360px;
+    max-width: 220px;
+    max-height: 280px;
     background: transparent;
     border: none;
     box-shadow: none;
@@ -963,7 +1028,7 @@
 .sp-attachment-placeholder img {
     display: block;
     max-width: 100%;
-    max-height: 360px;
+    max-height: 280px;
     width: auto;
     height: auto;
 }

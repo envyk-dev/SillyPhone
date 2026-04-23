@@ -38,24 +38,34 @@ function scrollToBottom(el) {
     }
 }
 
-// Attachment placeholder element. Card stays a pristine photo-frame — just
-// the kind icon + generic "Image"/"Video" label. When a description exists,
-// it rides on the element as a native `title` tooltip (desktop hover) and is
-// also surfaced as a tap-to-reveal popover (wired in modal.js). Kept off the
-// card itself to preserve the IM-app immersion.
+// Attachment placeholder element. Two render paths:
+// - no image path → pristine photo-frame with kind icon + "Image"/"Video" label
+// - image path   → real <img> inside the same element; the :has(img) CSS
+//                   rule sheds the frame and lets the image grow to its
+//                   capped natural aspect ratio
+// Either way, the description (when set) rides along as a native `title`
+// tooltip and is revealable via tap-popover (wired in modal.js).
 function attachmentPlaceholder(attachment, from, chatIdx) {
     if (!attachment) return null;
     const el = document.createElement('div');
     el.className = `sp-attachment-placeholder sp-attachment-placeholder-${from === 'user' ? 'user' : 'char'} sp-attachment-${attachment.kind}`;
-    const icon = attachment.kind === 'video' ? '🎥' : '📷';
-    const label = attachment.kind === 'video' ? 'Video' : 'Image';
-    const iconEl = document.createElement('span');
-    iconEl.className = 'sp-attachment-placeholder-icon';
-    iconEl.textContent = icon;
-    const labelEl = document.createElement('span');
-    labelEl.className = 'sp-attachment-placeholder-label';
-    labelEl.textContent = label;
-    el.append(iconEl, labelEl);
+    if (typeof attachment.image === 'string' && attachment.image.length > 0) {
+        const img = document.createElement('img');
+        img.alt = attachment.kind === 'video' ? 'Video attachment' : 'Image attachment';
+        img.src = '/' + attachment.image.replace(/^\/+/, '');
+        img.loading = 'lazy';
+        el.appendChild(img);
+    } else {
+        const icon = attachment.kind === 'video' ? '🎥' : '📷';
+        const label = attachment.kind === 'video' ? 'Video' : 'Image';
+        const iconEl = document.createElement('span');
+        iconEl.className = 'sp-attachment-placeholder-icon';
+        iconEl.textContent = icon;
+        const labelEl = document.createElement('span');
+        labelEl.className = 'sp-attachment-placeholder-label';
+        labelEl.textContent = label;
+        el.append(iconEl, labelEl);
+    }
     // data-entry-idx is what the reveal-popover handler in modal.js keys
     // off. It MUST be set for live-appended cards too, not just on full
     // re-renders, or the popover silently no-ops until the next refresh.

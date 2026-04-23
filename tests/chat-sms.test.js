@@ -129,12 +129,28 @@ test('buildBurstMessage: attachment without bubbles is allowed', () => {
     });
 });
 
-test('buildBurstMessage: attachment.image reserved for future (always null now)', () => {
+test('buildBurstMessage: attachment.image string path preserved on image kind', () => {
     const m = buildBurstMessage({
-        from: 'char', msgs: [], ts: 1, charName: 'A', userName: 'U',
-        attachment: { kind: 'image', description: 'x', image: { dataUri: 'data:...', width: 1, height: 1 } },
+        from: 'user', msgs: [], ts: 1, charName: 'A', userName: 'U',
+        attachment: { kind: 'image', description: 'x', image: 'user/images/A/sp_k2m8x.jpg' },
+    });
+    assert.equal(m.extra.sillyphone.attachment.image, 'user/images/A/sp_k2m8x.jpg');
+});
+
+test('buildBurstMessage: attachment.image non-string normalized to null', () => {
+    const m = buildBurstMessage({
+        from: 'user', msgs: [], ts: 1, charName: 'A', userName: 'U',
+        attachment: { kind: 'image', description: 'x', image: { dataUri: 'data:...' } },
     });
     assert.equal(m.extra.sillyphone.attachment.image, null);
+});
+
+test('buildBurstMessage: attachment.image preserved on video kind (video still thumbnail)', () => {
+    const m = buildBurstMessage({
+        from: 'user', msgs: [], ts: 1, charName: 'A', userName: 'U',
+        attachment: { kind: 'video', description: 'x', image: 'user/images/A/sp_k2m8x.jpg' },
+    });
+    assert.equal(m.extra.sillyphone.attachment.image, 'user/images/A/sp_k2m8x.jpg');
 });
 
 test('deleteMessageFromBurst: removes msg, returns updated chat msg', () => {
@@ -278,4 +294,52 @@ test('rebuildBurstFromMes: reformats mes so displayed text is canonical', () => 
     const r = rebuildBurstFromMes(chatMsg);
     assert.equal(r.action, 'update');
     assert.equal(r.msg.mes, '[SMS]\n- hello\n- world');
+});
+
+test('rebuildBurstFromMes: preserves attachment.image when kind still matches', () => {
+    const chatMsg = {
+        mes: '[SMS]\n[image: a sunset over the ocean]\n- look',
+        extra: {
+            sillyphone: {
+                from: 'user', msgs: ['look'], ts: 9,
+                attachment: { kind: 'image', description: 'old', image: 'user/images/A/sp_abcde.jpg' },
+            },
+        },
+    };
+    const r = rebuildBurstFromMes(chatMsg);
+    assert.equal(r.action, 'update');
+    assert.equal(r.msg.extra.sillyphone.attachment.kind, 'image');
+    assert.equal(r.msg.extra.sillyphone.attachment.description, 'a sunset over the ocean');
+    assert.equal(r.msg.extra.sillyphone.attachment.image, 'user/images/A/sp_abcde.jpg');
+});
+
+test('rebuildBurstFromMes: drops attachment.image when user deletes the attachment line', () => {
+    const chatMsg = {
+        mes: '[SMS]\n- just text now',
+        extra: {
+            sillyphone: {
+                from: 'user', msgs: ['just text now'], ts: 9,
+                attachment: { kind: 'image', description: 'x', image: 'user/images/A/sp_abcde.jpg' },
+            },
+        },
+    };
+    const r = rebuildBurstFromMes(chatMsg);
+    assert.equal(r.action, 'update');
+    assert.equal(r.msg.extra.sillyphone.attachment, undefined);
+});
+
+test('rebuildBurstFromMes: drops attachment.image when user changes kind (image → video)', () => {
+    const chatMsg = {
+        mes: '[SMS]\n[video: now a video]\n- look',
+        extra: {
+            sillyphone: {
+                from: 'user', msgs: ['look'], ts: 9,
+                attachment: { kind: 'image', description: 'old', image: 'user/images/A/sp_abcde.jpg' },
+            },
+        },
+    };
+    const r = rebuildBurstFromMes(chatMsg);
+    assert.equal(r.action, 'update');
+    assert.equal(r.msg.extra.sillyphone.attachment.kind, 'video');
+    assert.equal(r.msg.extra.sillyphone.attachment.image, null);
 });

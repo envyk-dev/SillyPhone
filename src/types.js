@@ -6,8 +6,10 @@
 /**
  * Attachment payload carried by an SMS burst. `kind` drives icon + label;
  * `description` is visible to the LLM (prompt context) but not to the user;
- * `image` is reserved for a future upload feature and is always null today.
- * @typedef {{ kind: 'image' | 'video', description: string, image: null }} Attachment
+ * `image` is a relative URL path (e.g. "user/images/Alice/sp_k2m8x.jpg")
+ * to an uploaded file when the user picked one, null otherwise. Only image-
+ * kind attachments ever carry a real path — video is description-only.
+ * @typedef {{ kind: 'image' | 'video', description: string, image: string | null }} Attachment
  */
 
 /**

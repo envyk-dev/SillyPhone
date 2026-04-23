@@ -4,6 +4,7 @@
 import * as chatSms from '../../chat-sms.js';
 import { ctx, cutChatMessage, replaceChatMessage } from '../../st.js';
 import { BACK_ICON } from '../icons.js';
+import { deleteImage } from '../../image-upload.js';
 
 const selectedIds = new Set();
 let active = false;
@@ -130,10 +131,15 @@ async function handleBulkDelete() {
 
     // Descending chatIdx first so later deletions don't shift earlier indices.
     const chatIdxs = Array.from(byChatIdx.keys()).sort((a, b) => b - a);
+    // Candidate paths: the image any mutated burst USED to carry. Not yet
+    // confirmed orphans — we reconcile against the post-mutation chat state
+    // below so a silently-failed /cut doesn't leave a ghost <img> 404'ing.
+    const candidateOrphans = [];
     for (const chatIdx of chatIdxs) {
         const { msgIdxs, attachment } = byChatIdx.get(chatIdx);
         let current = ctx().chat?.[chatIdx];
         if (!current) continue;
+        const originalImage = current?.extra?.sillyphone?.attachment?.image || null;
 
         let removed = false;
         // Bubbles first, descending msgIdx so splice indices stay valid.
@@ -152,9 +158,30 @@ async function handleBulkDelete() {
         if (removed) {
             // eslint-disable-next-line no-await-in-loop
             await cutChatMessage(chatIdx);
+            if (originalImage) candidateOrphans.push(originalImage);
         } else {
             replaceChatMessage(chatIdx, current);
+            if (attachment && originalImage) candidateOrphans.push(originalImage);
         }
+    }
+    // Force an immediate save BEFORE running cleanup. replaceChatMessage
+    // uses saveChatDebounced (1-2s delay) — without this, a fast refresh
+    // after delete reloads the pre-mutation state from disk and the tag
+    // "comes back". /cut already saves via its own path, but calling this
+    // unconditionally is a harmless no-op for the cut case.
+    try { await ctx().saveChat?.(); } catch (err) { console.warn('[SillyPhone] saveChat failed after delete', err); }
+
+    // Reconcile: delete files ONLY if nothing in chat still points at them.
+    // Guards against /cut silently no-op'ing (the failure that used to
+    // produce "ghost" cards with a broken-image icon — file wiped on disk,
+    // but the tag with its path still in extra.sillyphone.attachment.image).
+    const stillReferenced = new Set();
+    for (const msg of ctx().chat || []) {
+        const p = msg?.extra?.sillyphone?.attachment?.image;
+        if (typeof p === 'string' && p.length > 0) stillReferenced.add(p);
+    }
+    for (const p of candidateOrphans) {
+        if (!stillReferenced.has(p)) deleteImage(p);
     }
 
     selectedIds.clear();
