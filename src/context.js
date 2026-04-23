@@ -16,7 +16,8 @@ Format:
 <!--Phone:{"msgs":["reply1","reply2"]}-->
 
 Guidelines:
-- 1-3 short messages in {{char}}'s texting voice (lowercase ok, typos ok, emoji ok).
+- 1-3 short messages in {{char}}'s texting voice. Derive the style from {{char}}'s character card and prior dialogue — capitalization, punctuation, spelling, emoji use, and burst rhythm vary by character. A 19-year-old art student texts nothing like a 50-year-old professor. Stay consistent with how {{char}} has texted earlier in this chat.
+- If {{char}}'s texting style isn't explicitly established, infer what's plausible for this character (age, profession, formality, current emotional state) and lock it in — don't default to generic lowercase-chatspeak. When genuinely in doubt, err neutral: sentence case, light punctuation, no abbreviations.
 - Never repeat a line already present in an [SMS] chat message above.
 - Do NOT describe {{char}}'s actions, expressions, feelings, or surroundings in this turn. Do NOT write "*she smiles*", "She pauses and types:", or anything that isn't literally the text of the reply. This turn is a text message — save narration for normal RP turns.
 

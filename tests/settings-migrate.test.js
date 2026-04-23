@@ -48,6 +48,21 @@ test('migrate: v0.5 default missing "Example exchange" → refreshed', () => {
     assert.equal(s.flowAInstructions, CURRENT_DEFAULT);
 });
 
+test('migrate: v0.7/v0.8 default with "short, lowercase, sloppy" priming → refreshed', () => {
+    const s = {
+        flowAInstructions: [
+            '# Phone / SMS system (SillyPhone extension)',
+            '<!--Phone:{"msgs":["text1","text2"]}-->',
+            'Output format ≠ history format',
+            'Example exchange (illustrative only)',
+            'typeDuration 500–3000ms feels human',
+            'Messages are short, lowercase, a little sloppy — like real texting.',
+        ].join('\n'),
+    };
+    migrate(s, CURRENT_DEFAULT);
+    assert.equal(s.flowAInstructions, CURRENT_DEFAULT);
+});
+
 test('migrate: v0.6 default missing "Output format" section → refreshed', () => {
     const s = {
         flowAInstructions: [

@@ -14,7 +14,7 @@
 // append new `{ to: N, apply }` entries; each runs only when s.version < to.
 // Once all pre-v7 users have upgraded, the v7 entry can be removed.
 
-export const CURRENT_VERSION = 7;
+export const CURRENT_VERSION = 8;
 
 // Fingerprint snippets from previous default Flow A instructions. If the
 // user's saved value still contains any of these, they never customized the
@@ -38,6 +38,9 @@ const OLD_FLOW_A_FINGERPRINTS = [
     // v0.4.x default — replaced in v0.5.0 with per-bubble timing docs.
     'holding up a coffee mug, slightly out of focus',
     'briefly narrate the act of texting or sending',
+    // v0.5.x–v0.8.x default — replaced with style-derivation guidance that
+    // lets characters text differently instead of all-lowercase-sloppy.
+    'short, lowercase, a little sloppy',
 ];
 
 // Heuristic fallback: looks like a default (has the marker example + header)
@@ -98,6 +101,17 @@ const MIGRATIONS = [
                 delete s.fastSms;
             }
             // Refresh the Flow A prompt if it still matches any prior default.
+            if (isStaleDefaultFlowA(s.flowAInstructions)) {
+                s.flowAInstructions = currentDefaultFlowA;
+            }
+        },
+    },
+    {
+        to: 8,
+        apply(s, currentDefaultFlowA) {
+            // v0.9 style-voice overhaul: refresh any saved blob still on a
+            // pre-style-voice default (fingerprinted via "short, lowercase,
+            // a little sloppy").
             if (isStaleDefaultFlowA(s.flowAInstructions)) {
                 s.flowAInstructions = currentDefaultFlowA;
             }

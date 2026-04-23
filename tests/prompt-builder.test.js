@@ -47,3 +47,13 @@ test('DEFAULT_FLOW_A_INSTRUCTIONS documents per-bubble timing', () => {
     assert.match(DEFAULT_FLOW_A_INSTRUCTIONS, /typeDuration/);
     assert.match(DEFAULT_FLOW_A_INSTRUCTIONS, /millisecond/i);
 });
+
+test('DEFAULT_FLOW_A_INSTRUCTIONS instructs per-character style derivation', () => {
+    // Must tell the model style comes from the character, not a universal default.
+    assert.match(DEFAULT_FLOW_A_INSTRUCTIONS, /character card/i);
+    assert.match(DEFAULT_FLOW_A_INSTRUCTIONS, /[Ss]tyle/);
+    // Must give explicit fallback for unset style.
+    assert.match(DEFAULT_FLOW_A_INSTRUCTIONS, /isn't explicitly established|in doubt|infer/i);
+    // Must not re-introduce the old universal lowercase/sloppy priming.
+    assert.doesNotMatch(DEFAULT_FLOW_A_INSTRUCTIONS, /short, lowercase, a little sloppy/);
+});

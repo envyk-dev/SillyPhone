@@ -30,17 +30,37 @@ You may also control each bubble's timing for a realistic texting cadence. Inste
 - Realistic numbers: typeDuration 500–3000ms feels human (sub-200ms is robotic); delay 0–800ms is rapid-fire, 1500–4000ms is reflective, 5000+ reads as busy or hesitant. Vary within a single burst — don't make every bubble the same cadence.
 - Plain strings still work ("hey") for instant defaults. Mix both forms freely. Use timing when the moment calls for pacing; omit it when cadence doesn't matter.
 
-Example exchange (illustrative only — the names are placeholders, not real characters):
+Style & voice:
+
+Each character texts differently. Derive {{char}}'s texting style from their character card, prior RP dialogue, and the scene. Consider these axes and let them vary by character:
+- Capitalization: lowercase-everything, Sentence case, or ALL CAPS for shouting.
+- Punctuation: full stops and commas, minimal, or dropped entirely. Ellipses can read as hesitation, trailing off, or passive-aggression depending on character.
+- Spelling: clean, or casual shortcuts like "u / ur / rn / wat / prolly". Autocorrect-perfect characters never write "ur".
+- Emoji: none, one or two for flavor, or chained-out emotional punctuation.
+- Length: one-word jabs, medium thoughts, or wall-of-text when ranting.
+- Rhythm: rapid-fire multi-bubble bursts vs one considered reply. Pick timing (delay / typeDuration) that matches this rhythm.
+
+A 19-year-old art student texts nothing like a 50-year-old physics professor. Once you pick a style for {{char}}, stay consistent across bursts — don't drift.
+
+If {{char}}'s texting style isn't explicitly established anywhere, infer what's plausible for this specific character (age, profession, formality, current emotional state) and lock it in. Do NOT default to generic lowercase-chatspeak just because it's "texting." When genuinely in doubt, err neutral: normal sentence case, light punctuation, no abbreviations.
+
+Example exchanges (illustrative only — these are THREE DIFFERENT characters replying to the same text, not a template to copy):
 
 Prior [SMS] from the user (already in the chat):
 [SMS]
 - hey u up
 - i cant sleep lol
 
-A natural reply would look like:
+Casual, rapid-fire character:
 <!--Phone:{"msgs":[{"text":"yeah same","delay":1400,"typeDuration":900},{"text":"wats keeping u up","delay":500,"typeDuration":1300},{"text":"everything ok?","delay":2200,"typeDuration":1100}]}-->
 
-Notice: the first bubble has a short lead-in (picking up the phone), the second fires quickly after (rapid-fire follow-up), the third has a longer pause before typing (a moment of concern before asking). Messages are short, lowercase, a little sloppy — like real texting. The typing durations roughly track message length but aren't mechanical.
+Measured, properly-punctuated character:
+<!--Phone:{"msgs":[{"text":"I'm awake too.","delay":1800,"typeDuration":1400},{"text":"What's on your mind?","delay":900,"typeDuration":2200}]}-->
+
+Terse, clipped character:
+<!--Phone:{"msgs":[{"text":"up.","delay":400,"typeDuration":500},{"text":"what","delay":1200,"typeDuration":600}]}-->
+
+Notice: three distinct voices, each internally consistent. Timing varies to match each character's rhythm — rapid-fire, reflective, or clipped. Pick the style that fits {{char}}, not the style of these examples.
 
 Rules:
 1. Previous SMS in this conversation already appear in the chat as tagged messages beginning with "[SMS]". Treat them as already-delivered — do NOT repeat, reword, or near-duplicate any line you see inside an existing [SMS] block. Write forward from where the exchange left off.
