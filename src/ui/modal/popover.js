@@ -69,13 +69,25 @@ export function dismissPopover(host) {
     if (backdrop) backdrop.click();
 }
 
-// Read-only info popover. Currently used to reveal attachment descriptions
-// without printing them on the card itself (keeps IM immersion). The trigger
-// gets `.sp-attachment-open` while the popover is mounted so CSS can ring it.
-// info: { kind: 'image' | 'video', body: string }
-export function showInfoPopover(host, trigger, { kind, body }) {
+// Info popover with optional action rows. The info block on top (kind +
+// description) is always rendered; when `actions` are supplied, a divider
+// and action buttons sit beneath — same shape as showPopover items, so CSS
+// (.sp-popover-btn, .sp-popover-destructive) is shared. The trigger picks up
+// `.sp-attachment-open` while the popover is mounted so CSS can ring it.
+// info: { kind: 'image' | 'video', body: string, actions?: [{ label, icon?, destructive?, action }] }
+export function showInfoPopover(host, trigger, { kind, body, actions }) {
     const icon = kind === 'video' ? '🎥' : '📷';
     const kindLabel = kind === 'video' ? 'Video' : 'Image';
+    const hasActions = Array.isArray(actions) && actions.length > 0;
+    const actionsHtml = hasActions ? `
+        <div class="sp-popover-divider"></div>
+        ${actions.map((a, i) => `
+            <button class="sp-popover-btn ${a.destructive ? 'sp-popover-destructive' : ''}" data-action-idx="${i}">
+                <span class="sp-popover-icon">${a.icon || ''}</span>
+                <span class="sp-popover-label">${escapeHtml(a.label)}</span>
+            </button>
+        `).join('')}
+    ` : '';
     const html = `
         <div class="sp-popover-info">
             <div class="sp-popover-info-kind">
@@ -83,9 +95,19 @@ export function showInfoPopover(host, trigger, { kind, body }) {
             </div>
             <div class="sp-popover-info-body">${escapeHtml(body)}</div>
         </div>
+        ${actionsHtml}
     `;
     trigger.classList.add('sp-attachment-open');
-    mountPopover(host, trigger, html, () => {
+    const { popover, dismiss } = mountPopover(host, trigger, html, () => {
         trigger.classList.remove('sp-attachment-open');
     });
+    if (hasActions) {
+        popover.querySelectorAll('[data-action-idx]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = Number(btn.dataset.actionIdx);
+                dismiss();
+                actions[idx].action();
+            });
+        });
+    }
 }

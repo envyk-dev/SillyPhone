@@ -8,11 +8,12 @@ import * as chatSms from '../chat-sms.js';
 import * as commands from '../commands.js';
 import { ctx } from '../st.js';
 import { playBubbles } from './playback.js';
-import { SEND_ICON, PLUS_ICON, BACK_ICON, TRASH_ICON } from './icons.js';
+import { SEND_ICON, PLUS_ICON, BACK_ICON, TRASH_ICON, IMAGE_PLUS_ICON, REFRESH_ICON, CLOSE_ICON } from './icons.js';
 import { showInfoPopover, dismissPopover } from './modal/popover.js';
 import { showSettingsSheet, dismissSettingsSheet } from './modal/settings-sheet.js';
 import * as manageMode from './modal/manage-mode.js';
 import * as attachmentStaging from './modal/attachment-staging.js';
+import * as charAttachmentEdit from './modal/char-attachment-edit.js';
 
 let modalEl = null;
 let messagesEl = null;
@@ -95,6 +96,10 @@ export function mount({ onSend, onReroll }) {
         triggerEl: attachBtn,
         isBlocked: manageMode.isActive,
     });
+    charAttachmentEdit.init({
+        sheetHost: modalEl,
+        onChange: refresh,
+    });
 
     closeBtn.addEventListener('click', handleCloseClick);
     menuBtn.addEventListener('click', openMenu);
@@ -109,16 +114,23 @@ export function mount({ onSend, onReroll }) {
 
     // Attachment description reveal — tap a card (outside manage mode) to
     // peek at the description that's otherwise only in the model's context.
-    // Manage-mode owns the card click for selection, so bail out there.
+    // For char-side cards the popover also exposes bind/replace/remove
+    // actions for the card's image (the model can't upload, so the user
+    // decides what the card looks like). Manage-mode owns the card click
+    // for selection, so bail out there.
     messagesEl.addEventListener('click', (e) => {
         if (manageMode.isActive()) return;
         const el = e.target.closest('.sp-attachment-placeholder');
         if (!el) return;
         const chatIdx = Number(el.dataset.entryIdx);
         if (!Number.isInteger(chatIdx)) return;
-        const att = ctx().chat?.[chatIdx]?.extra?.sillyphone?.attachment;
+        const tag = ctx().chat?.[chatIdx]?.extra?.sillyphone;
+        const att = tag?.attachment;
         if (!att?.description) return;
-        showInfoPopover(modalEl, el, { kind: att.kind, body: att.description });
+        const actions = tag.from === 'char'
+            ? buildCharAttachmentActions(chatIdx, att.kind, att.image)
+            : undefined;
+        showInfoPopover(modalEl, el, { kind: att.kind, body: att.description, actions });
     });
 
     modalEl.querySelector('.sp-modal-input').addEventListener('submit', (e) => {
@@ -332,4 +344,22 @@ async function confirmClearChat() {
     if (!confirm('Clear entire phone conversation for this chat? This cannot be undone.')) return;
     await commands.clearThread();
     refresh();
+}
+
+// Popover actions offered on char-side attachment cards. Set/Replace always
+// read "image" because the picker only accepts image files — a "video"
+// attachment is really a still with a play-icon overlay (see
+// feedback_sillyphone_video_semantics memory). The destructive Clear row,
+// by contrast, mirrors the attachment kind since that's what's being cleared.
+function buildCharAttachmentActions(chatIdx, kind, existingPath) {
+    if (existingPath) {
+        const clearLabel = kind === 'video' ? 'Clear video' : 'Clear image';
+        return [
+            { label: 'Replace image', icon: REFRESH_ICON, action: () => charAttachmentEdit.bindImage(chatIdx, existingPath) },
+            { label: clearLabel, icon: CLOSE_ICON, destructive: true, action: () => charAttachmentEdit.unbindImage(chatIdx, kind, existingPath) },
+        ];
+    }
+    return [
+        { label: 'Set image', icon: IMAGE_PLUS_ICON, action: () => charAttachmentEdit.bindImage(chatIdx, null) },
+    ];
 }
