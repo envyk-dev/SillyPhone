@@ -14,6 +14,7 @@ import { showSettingsSheet, dismissSettingsSheet } from './modal/settings-sheet.
 import * as manageMode from './modal/manage-mode.js';
 import * as attachmentStaging from './modal/attachment-staging.js';
 import * as charAttachmentEdit from './modal/char-attachment-edit.js';
+import * as drag from './modal/drag.js';
 
 let modalEl = null;
 let messagesEl = null;
@@ -105,12 +106,7 @@ export function mount({ onSend, onReroll }) {
     menuBtn.addEventListener('click', openMenu);
     attachBtn.addEventListener('click', attachmentStaging.openMenu);
 
-    modalEl.addEventListener('click', (e) => {
-        // Only trigger on true backdrop clicks. closest() would misfire when
-        // a child (e.g. sheet button) is removed mid-click — its detached
-        // target returns null from closest and spuriously dismisses.
-        if (e.target === modalEl) handleCloseClick();
-    });
+    drag.init({ modalEl, handleEl: modalEl.querySelector('.sp-modal-header') });
 
     // Attachment description reveal — tap a card (outside manage mode) to
     // peek at the description that's otherwise only in the model's context.
@@ -221,7 +217,8 @@ function setStatus(text) {
 
 export function open() {
     if (!modalEl) return;
-    modalEl.style.display = 'flex';
+    modalEl.style.display = 'block';
+    drag.restore(modalEl);
     storage.clearUnread();
     refresh();
     setTimeout(() => inputEl?.focus(), 50);

@@ -54,10 +54,13 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* On mobile, ST's bottom UI (chat input, floating buttons, keyboard) covers the
-   badge. Move it just below ST's top bar instead — --topBarBlockSize is
-   defined on ST's root so the badge adapts if the user scales the top bar. */
-@media (max-width: 600px) {
+/* On mobile/tablet widths, ST's bottom UI (chat input, floating buttons,
+   keyboard) covers the badge — ST itself switches to its mobile layout at
+   1000px, so we mirror that breakpoint here (not the 600px we use for the
+   phone-modal fullscreen flip). Move the badge just below ST's top bar;
+   --topBarBlockSize is defined on ST's root so it adapts if the user
+   scales the top bar. */
+@media (max-width: 1000px) {
     #sillyphone-badge {
         top: calc(var(--topBarBlockSize, 40px) + 4px) !important;
         right: 10px !important;
@@ -124,46 +127,66 @@
     .sp-toast { max-width: none; }
 }
 
-/* ---------- Modal ---------- */
+/* ---------- Modal ----------
+ * Desktop: floating phone-shaped panel with a black bezel. No backdrop —
+ * main ST chat stays clickable behind it. Drag is wired in modal/drag.js
+ * (mousedown on header), position persists in localStorage.
+ * Mobile (<=600px): fullscreen, no bezel (phones already look like phones).
+ */
 #sillyphone-modal {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    background: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    top: 60px;
+    right: 24px;
     z-index: 2147483647;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     box-sizing: border-box;
+    background: #000;
+    padding: 10px;
+    border-radius: 38px;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 24px 60px rgba(0, 0, 0, 0.6),
+        0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .sp-modal-inner {
     position: relative;
     background: #0a0a0c;
     color: white;
-    width: 100%;
-    height: 100%;
-    max-width: 420px;
-    max-height: 720px;
+    width: 380px;
+    height: 720px;
     display: flex;
     flex-direction: column;
-    border-radius: 16px;
+    border-radius: 28px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
     box-sizing: border-box;
 }
 
 @media (max-width: 600px) {
+    #sillyphone-modal {
+        /* !important beats inline top/left written by drag.js on desktop,
+           so rotating a tablet from landscape→portrait re-fills the screen
+           instead of leaving the phone stranded at a saved desktop position.
+           Explicit vw/dvh also guaranteed on mobile — percentage-height
+           resolution through position:fixed top/bottom has been flaky
+           historically, and inner collapsing to 0px is why the phone
+           "disappeared" at narrow widths. */
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        padding: 0;
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+    }
     .sp-modal-inner {
-        max-width: 100vw;
-        max-height: 100vh;
-        max-height: 100dvh;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
         border-radius: 0;
     }
 }
@@ -175,6 +198,13 @@
     padding: 11px 14px;
     background: linear-gradient(180deg, #1a1a1c 0%, #0a0a0c 100%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: grab;
+    user-select: none;
+}
+.sp-modal-header:active { cursor: grabbing; }
+@media (max-width: 600px) {
+    .sp-modal-header,
+    .sp-modal-header:active { cursor: default; }
 }
 
 .sp-modal-header button {
@@ -821,10 +851,6 @@
 }
 
 /* ---------- UI tweaks ---------- */
-.sp-modal-inner { max-width: 380px; }
-@media (max-width: 480px) {
-    .sp-modal-inner { max-width: none; }
-}
 .sp-modal-close { font-size: 20px; }
 
 /* ---------- Input row + attachment button/chip ---------- */

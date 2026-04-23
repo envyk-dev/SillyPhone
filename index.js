@@ -27,8 +27,12 @@ function currentUserName() {
 }
 
 function openPhone() {
-    modal.setCharInfo(currentCharName());
-    modal.open();
+    if (modal.isOpen()) {
+        modal.close();
+    } else {
+        modal.setCharInfo(currentCharName());
+        modal.open();
+    }
     badge.refresh();
 }
 
