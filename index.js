@@ -11,6 +11,7 @@ import * as toast from './src/ui/toast.js';
 import * as modal from './src/ui/modal.js';
 import * as settingsPanel from './src/ui/settings-panel.js';
 import * as extensionsMenu from './src/ui/extensions-menu.js';
+import * as theme from './src/ui/theme.js';
 import * as rowObserver from './src/row-observer.js';
 import * as events from './src/events.js';
 import { cleanHostProse, splitUserInput } from './src/host-prose.js';
@@ -237,6 +238,10 @@ async function handleReroll() {
 function init() {
     try {
         settings.init();
+        // Apply saved theme before any UI mounts so the badge/modal render
+        // with the correct accent on first paint instead of briefly showing
+        // violet and reflowing.
+        theme.apply(settings.get('theme'));
         modal.mount({ onSend: handleSend, onReroll: handleReroll });
         modal.setCharInfo(currentCharName());
         badge.mount(openPhone);
@@ -254,7 +259,7 @@ function init() {
         context.updateAll();
         rowObserver.start();
         rowObserver.styleAllTaggedRows();
-        console.log('[SillyPhone] loaded v0.9.0');
+        console.log('[SillyPhone] loaded v0.11.0');
     } catch (err) {
         console.error('[SillyPhone] init failed', err);
     }

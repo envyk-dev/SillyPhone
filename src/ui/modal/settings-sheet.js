@@ -8,7 +8,9 @@
 import * as settings from '../../settings.js';
 import * as badge from '../badge.js';
 import * as context from '../../context.js';
+import * as settingsPanel from '../settings-panel.js';
 import { applySmsRowVisibility } from '../settings-panel.js';
+import * as extensionsMenu from '../extensions-menu.js';
 import { escapeHtml } from '../../util.js';
 import { TRASH_SMALL_ICON, CLOSE_ICON } from '../icons.js';
 
@@ -66,6 +68,13 @@ export function showSettingsSheet(host, { onEnterManage, onClearChat }) {
             badge.refresh();
             context.updateAll();
             applySmsRowVisibility();
+            // Mirror the write onto the drawer panel and wand-menu so their
+            // visual state stays in sync. Without this, toggling showSmsRows
+            // here leaves the wand-menu icon stale — and its next click
+            // reads/writes the real (already-flipped) value, which looks
+            // like "clicking the wand does nothing".
+            extensionsMenu.refresh();
+            settingsPanel.refresh();
         });
     });
 

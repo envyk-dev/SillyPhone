@@ -1,5 +1,41 @@
 /* SillyPhone styles */
 
+/* ---------- Theme palettes ----------
+   Every accent surface in this stylesheet reads from three CSS variables
+   (--sp-grad-a/b/c). Each palette is a narrow hue sweep at similar
+   saturation/lightness, just rotated around the color wheel. Violet is the
+   default; the others kick in when data-sp-theme is set on :root by
+   src/ui/theme.js apply(). rgba tints are derived via color-mix so the
+   whole system stays driven by these three stops.
+   Default (violet) lives on :root; named presets override the same three
+   vars under [data-sp-theme="..."] so every descendant inherits them. */
+:root,
+:root[data-sp-theme="violet"] {
+    --sp-grad-a: #6366f1;
+    --sp-grad-b: #8b5cf6;
+    --sp-grad-c: #ad72f4;
+}
+:root[data-sp-theme="rose"] {
+    --sp-grad-a: #f43f5e;
+    --sp-grad-b: #ec4899;
+    --sp-grad-c: #f472b6;
+}
+:root[data-sp-theme="ember"] {
+    --sp-grad-a: #f97316;
+    --sp-grad-b: #fb923c;
+    --sp-grad-c: #fbbf24;
+}
+:root[data-sp-theme="emerald"] {
+    --sp-grad-a: #0a996c;
+    --sp-grad-b: #19b594;
+    --sp-grad-c: #21b491;
+}
+:root[data-sp-theme="azure"] {
+    --sp-grad-a: #0ea5e9;
+    --sp-grad-b: #3b82f6;
+    --sp-grad-c: #6366f1;
+}
+
 /* ---------- Badge ---------- */
 #sillyphone-badge {
     position: fixed !important;
@@ -8,11 +44,11 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #ad72f4);
+    background: linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-c));
     color: white;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
+    box-shadow: 0 4px 12px color-mix(in oklab, var(--sp-grad-b) 50%, transparent);
     z-index: 2147483646;
     display: flex;
     align-items: center;
@@ -99,7 +135,7 @@
 .sp-toast-name {
     font-size: 12px;
     font-weight: 600;
-    color: #8b5cf6;
+    color: var(--sp-grad-b);
     margin-bottom: 3px;
 }
 
@@ -254,7 +290,7 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #ad72f4);
+    background: linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-c));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -338,7 +374,7 @@
 }
 
 .sp-bubble-user {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6 60%, #ad72f4);
+    background: linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-b) 60%, var(--sp-grad-c));
     color: #fff;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
@@ -429,7 +465,7 @@
 }
 
 .sp-input-pill:focus-within {
-    border-color: rgba(139, 92, 246, 0.6);
+    border-color: color-mix(in oklab, var(--sp-grad-b) 60%, transparent);
 }
 
 .sp-modal-input textarea {
@@ -463,7 +499,7 @@
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #ad72f4) !important;
+    background: linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-c)) !important;
     color: white !important;
     margin-bottom: 1px;
 }
@@ -516,7 +552,8 @@
 
 .sp-sheet-content {
     position: relative;
-    background: #2a2a2c;
+    background: #16161a;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
     padding: 8px;
@@ -545,7 +582,7 @@
 
 .sp-sheet-btn:hover,
 .sp-sheet-btn:active {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .sp-sheet-icon {
@@ -564,12 +601,16 @@
 
 .sp-sheet-cancel {
     margin-top: 8px;
-    background: #3a3a3c;
+    background: #1f1f23;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     justify-content: center;
     font-weight: 600;
 }
 
-.sp-sheet-cancel:hover { background: #4a4a4c; }
+.sp-sheet-cancel:hover {
+    background: #27272c;
+    border-color: rgba(255, 255, 255, 0.12);
+}
 
 /* Title row above the settings sheet content. */
 .sp-sheet-title {
@@ -593,7 +634,7 @@
 
 .sp-sheet-divider {
     height: 1px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
     margin: 6px 8px;
 }
 
@@ -614,7 +655,7 @@
 }
 
 .sp-sheet-toggle:hover,
-.sp-sheet-toggle:active { background: rgba(255, 255, 255, 0.08); }
+.sp-sheet-toggle:active { background: rgba(255, 255, 255, 0.05); }
 
 .sp-sheet-toggle-label {
     flex: 1;
@@ -663,7 +704,7 @@
 }
 
 .sp-switch.on {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6 60%, #ad72f4);
+    background: linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-b) 60%, var(--sp-grad-c));
 }
 
 .sp-switch.on::after { left: 18px; }
@@ -771,7 +812,7 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1.2px;
-    color: #ad72f4;
+    color: var(--sp-grad-c);
     font-weight: 700;
     margin-bottom: 6px;
 }
@@ -819,8 +860,8 @@
 
 .sp-manage-mode .sp-bubble.sp-selected::before {
     content: "✓";
-    background: #8b5cf6;
-    border-color: #8b5cf6;
+    background: var(--sp-grad-b);
+    border-color: var(--sp-grad-b);
 }
 
 .sp-manage-mode .sp-bubble:active {
@@ -836,12 +877,267 @@
     font-weight: 600;
 }
 
-/* ---------- Settings panel ---------- */
-.sp-settings label { display: block; margin: 6px 0; }
-.sp-settings h4 { margin: 8px 0 4px; font-size: 13px; }
-.sp-settings textarea { font-family: monospace; font-size: 12px; }
-.sp-settings hr { border: none; border-top: 1px solid #444; margin: 10px 0; }
-.sp-settings button { margin-top: 6px; margin-right: 6px; }
+/* ---------- Settings panel (Extensions drawer) ----------
+   Polished panel inside ST's .inline-drawer-content. ST owns the outer
+   drawer-toggle/header (collapse UX); everything below mounts inside
+   .sp-panel — a dark card with titled sections, switch rows, input
+   fields, and the theme grid. Accent colors cascade through the theme
+   vars so flipping data-sp-theme updates this surface live. */
+.sp-panel {
+    background: #16161a;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: #e6e6e8;
+    font-size: 13px;
+    line-height: 1.4;
+}
+.sp-panel * { box-sizing: border-box; }
+
+.sp-panel-content {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 0 10px;
+}
+
+.sp-section-title {
+    padding: 14px 16px 6px;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #8e8e93;
+    font-weight: 700;
+}
+.sp-section-title-sub {
+    text-transform: none;
+    letter-spacing: 0;
+    color: #72727a;
+    font-weight: 500;
+    font-size: 10.5px;
+    margin-left: 6px;
+}
+
+.sp-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.05);
+    margin: 6px 0;
+}
+
+/* Generic row — matches the in-modal toggle footprint, tuned down a hair
+   for the drawer's denser space. */
+.sp-row {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+}
+.sp-row:hover { background: rgba(255, 255, 255, 0.03); }
+.sp-row-label {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sp-row-main {
+    font-size: 13px;
+    color: #e6e6e8;
+    font-weight: 500;
+}
+.sp-row-sub {
+    font-size: 11.5px;
+    color: #8e8e93;
+    line-height: 1.35;
+}
+
+/* Number-input row reuses .sp-row but the right-hand slot is a tiny
+   numeric input instead of a switch. Padding tuned so clicking the row
+   background doesn't steal focus from the input. */
+.sp-row-number {
+    cursor: default;
+}
+.sp-row-number:hover { background: transparent; }
+.sp-row-number input {
+    width: 60px;
+    background: #0e0e11;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-align: right;
+    font-family: inherit;
+}
+.sp-row-number input:focus {
+    outline: none;
+    border-color: var(--sp-grad-b);
+}
+
+/* Textarea / free-form field block. Lives outside the row grid so the
+   label can stack above the control with its own subtitle. */
+.sp-field {
+    padding: 8px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sp-field-label {
+    font-size: 11.5px;
+    color: #bdbdc4;
+    font-weight: 500;
+}
+.sp-field-sub {
+    font-size: 11px;
+    color: #72727a;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+.sp-field textarea {
+    background: #0e0e11;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #e6e6e8;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    resize: vertical;
+    width: 100%;
+}
+.sp-field textarea:focus {
+    outline: none;
+    border-color: var(--sp-grad-b);
+}
+
+/* Theme grid — 5 swatch+name cells. Selection cell gets a soft tint
+   background + white ring on the swatch; hover lifts the swatch slightly.
+   Cells are <button>s so keyboard nav works. */
+.sp-theme-grid {
+    padding: 4px 12px 8px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+.sp-theme-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 4px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+    border: 1px solid transparent;
+    background: transparent;
+    font-family: inherit;
+    color: inherit;
+}
+.sp-theme-cell:hover { background: rgba(255, 255, 255, 0.05); }
+.sp-theme-cell.selected {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.sp-theme-sw {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.sp-theme-cell:hover .sp-theme-sw { transform: scale(1.06); }
+.sp-theme-cell.selected .sp-theme-sw {
+    box-shadow: 0 0 0 2px #fff inset, 0 0 0 4px rgba(0, 0, 0, 0.4) inset;
+}
+.sp-theme-name {
+    font-size: 11px;
+    color: #bdbdc4;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+.sp-theme-cell.selected .sp-theme-name {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Action buttons (Clear thread / Clear all). Destructive variant tints
+   on hover so it's obvious which button nukes more data. */
+.sp-actions {
+    padding: 4px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sp-btn {
+    background: #1f1f23;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #e6e6e8;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-family: inherit;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+.sp-btn:hover {
+    background: #27272c;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.sp-btn-icon {
+    width: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #9a9aa2;
+    flex-shrink: 0;
+}
+.sp-btn-destructive { color: #ff6b63; }
+.sp-btn-destructive .sp-btn-icon { color: #ff6b63; }
+.sp-btn-destructive:hover {
+    background: rgba(255, 69, 58, 0.08);
+    border-color: rgba(255, 69, 58, 0.25);
+}
+
+/* Summarize-conflict inline warn banner — lives inside rolling memory. */
+.sp-warn {
+    margin: 4px 16px 8px;
+    padding: 8px 10px;
+    background: rgba(255, 176, 32, 0.08);
+    border: 1px solid rgba(255, 176, 32, 0.25);
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: #ffb020;
+    line-height: 1.4;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+.sp-warn[hidden] { display: none; }
+.sp-warn-icon { flex-shrink: 0; }
+
+/* Inline-code fragment inside field-sub (used to cite the marker format). */
+.sp-kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    background: #0e0e11;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #bdbdc4;
+}
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
@@ -866,7 +1162,7 @@
 }
 .sp-attachment-btn {
     flex: 0 0 auto;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-b));
     border: none;
     color: white;
     cursor: pointer;
@@ -894,8 +1190,8 @@
     gap: 10px;
     padding: 6px 10px;
     margin: 0 4px 8px 4px;
-    background: rgba(139, 92, 246, 0.16);
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    background: color-mix(in oklab, var(--sp-grad-b) 16%, transparent);
+    border: 1px solid color-mix(in oklab, var(--sp-grad-b) 30%, transparent);
     border-radius: 14px;
     font-size: 12px;
     max-width: calc(100% - 8px);
@@ -919,7 +1215,7 @@
    background + emoji text. The shared .sp-attachment-chip-thumb-img class
    already provides the 40×40 frame. */
 .sp-attachment-chip-thumb-icon {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6 60%, #ad72f4);
+    background: linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-b) 60%, var(--sp-grad-c));
     font-size: 18px;
 }
 .sp-attachment-chip-text {
@@ -933,7 +1229,7 @@
 .sp-attachment-chip-heading {
     font-size: 12px;
     font-weight: 600;
-    color: #bda8f8;
+    color: color-mix(in oklab, var(--sp-grad-c) 80%, #ffffff);
     line-height: 1.2;
 }
 .sp-attachment-chip-desc {
@@ -990,7 +1286,7 @@
     align-self: flex-end;
     background:
         radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.12), transparent 60%),
-        linear-gradient(135deg, #6366f1, #8b5cf6 60%, #ad72f4);
+        linear-gradient(135deg, var(--sp-grad-a), var(--sp-grad-b) 60%, var(--sp-grad-c));
     border: none;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
@@ -1017,7 +1313,7 @@
     cursor: pointer;
 }
 .sp-attachment-placeholder.sp-attachment-open {
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.7);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--sp-grad-b) 70%, transparent);
 }
 /* Video-kind attachments carry an image still as the thumbnail; a centered
    play-icon overlay signals that it's meant to read as a video, not a
@@ -1094,8 +1390,8 @@
 }
 .sp-manage-mode .sp-attachment-placeholder.sp-selected::before {
     content: "✓";
-    background: #8b5cf6;
-    border-color: #8b5cf6;
+    background: var(--sp-grad-b);
+    border-color: var(--sp-grad-b);
 }
 
 /* SMS rows in the MAIN SillyTavern chat log are hidden by default — users
@@ -1111,7 +1407,7 @@ body:not(.sp-show-sms-rows) .mes.sp-chat-sms {
 /* Active-state tint for the wand-menu toggle so the on/off state reads at a
    glance even without the icon swap. */
 #sillyphone-show-sms-rows.sp-menu-active .sp-menu-icon {
-    color: #8b5cf6;
+    color: var(--sp-grad-b);
 }
 
 /* ---------- Reroll icon (appended to last char turn) ---------- */

@@ -90,18 +90,22 @@ The last AI SMS burst gets a reroll icon. Tap it to cut that burst and re-run `/
 
 Editing an SMS row directly in the main chat log (via SillyTavern's normal edit-message flow) re-parses the row back into `extra.sillyphone` so the phone modal stays in sync. Removing all bubbles from a row deletes it; adding new ones updates in place.
 
+## Themes
+
+Five built-in accent palettes — Violet (default), Rose, Ember, Emerald, Azure. Each is a narrow three-stop gradient rotated to a different part of the color wheel. Pick one in the **Theme** section at the top of the SillyPhone settings panel; the badge, modal, avatar fallback, user bubbles, send / attachment buttons, switches, and chip highlights all recolor live. Selection is global (not per-character) and persists across chats.
+
 ## Settings
 
 Open Extensions drawer → **SillyPhone** panel:
 
-- Enabled / SMS-only mode / Show badge / Toast sound
-- Rolling memory toggle + thresholds + custom summarization prompt
-- Forceful chat inject mode (Flow A instructions injected at depth 0)
-- Show hidden `[SMS]` rows in main chat log (debug toggle)
-- Editable Flow A instructions
-- Clear phone thread / Clear all phone data for current chat
+- **Theme** — pick one of five accent palettes
+- **Display** — Enabled, Show floating badge, Toast sound, Show hidden `[SMS]` rows in main chat
+- **Chat behavior** — SMS-only mode (drop host prose)
+- **Rolling memory** (opt-in) — enable toggle, summarize every N / keep recent N thresholds, custom summarization prompt
+- **AI instructions** — Forceful chat inject (depth-0 user injection), editable Flow A marker instructions
+- **Maintenance** — Clear phone thread / Clear all phone data for current chat
 
-A **wand-menu** entry (📱 SillyPhone) mirrors the visibility toggle for quick access.
+A **wand-menu** entry (📱 SillyPhone) mirrors the `Show [SMS] rows` toggle for quick access.
 
 ## Files
 
@@ -121,7 +125,7 @@ SillyPhone/
 │   ├── prompt-builder.js   # Flow A instructions + summarization prompt
 │   ├── context.js          # setExtensionPrompt: instructions, summary, SMS-mode
 │   ├── settings.js         # extension_settings storage + migrations
-│   ├── settings-migrate.js # versioned migration table (CURRENT_VERSION=7)
+│   ├── settings-migrate.js # versioned migration table (CURRENT_VERSION=8)
 │   ├── memory.js           # rolling-memory orchestration
 │   ├── memory-policy.js    # pure shouldTriggerRolling kernel
 │   ├── host-prose.js       # cleanHostProse + splitUserInput (pure)
@@ -137,6 +141,7 @@ SillyPhone/
 │       ├── bubbles.js
 │       ├── icons.js        # shared SVG icon set
 │       ├── playback.js     # sequential bubble reveal with typing indicator
+│       ├── theme.js        # accent-theme registry + applier
 │       ├── settings-panel.js
 │       ├── extensions-menu.js  # wand-menu entry
 │       ├── modal.js        # shell — wires the submodules below
