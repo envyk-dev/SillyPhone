@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { listBursts, formatBurstMes, buildBurstMessage, deleteMessageFromBurst, deleteAttachmentFromBurst, parseBurstMes, rebuildBurstFromMes } from '../src/chat-sms.js';
+import { listBursts, formatBurstMes, buildBurstMessage, deleteMessageFromBurst, deleteAttachmentFromBurst, parseBurstMes, rebuildBurstFromMes, findAttachedProseHost } from '../src/chat-sms.js';
 
 test('listBursts: returns chat messages tagged with sillyphone, with chatIdx', () => {
     const chat = [
@@ -326,6 +326,64 @@ test('rebuildBurstFromMes: drops attachment.image when user deletes the attachme
     const r = rebuildBurstFromMes(chatMsg);
     assert.equal(r.action, 'update');
     assert.equal(r.msg.extra.sillyphone.attachment, undefined);
+});
+
+test('findAttachedProseHost: prev is non-user non-tagged AI msg → returns idx-1', () => {
+    const chat = [
+        { is_user: true, mes: 'hi', extra: {} },
+        { is_user: false, mes: 'prose', extra: {} },
+        { is_user: false, mes: '[SMS]\n- yo', extra: { sillyphone: { from: 'char', msgs: ['yo'], ts: 1 } } },
+    ];
+    assert.equal(findAttachedProseHost(chat, 2), 1);
+});
+
+test('findAttachedProseHost: prev is user msg → -1', () => {
+    const chat = [
+        { is_user: true, mes: 'hi', extra: {} },
+        { is_user: false, mes: '[SMS]\n- yo', extra: { sillyphone: { from: 'char', msgs: ['yo'], ts: 1 } } },
+    ];
+    assert.equal(findAttachedProseHost(chat, 1), -1);
+});
+
+test('findAttachedProseHost: prev is another tagged burst → -1', () => {
+    const chat = [
+        { is_user: false, mes: '[SMS]\n- a', extra: { sillyphone: { from: 'char', msgs: ['a'], ts: 1 } } },
+        { is_user: false, mes: '[SMS]\n- b', extra: { sillyphone: { from: 'char', msgs: ['b'], ts: 2 } } },
+    ];
+    assert.equal(findAttachedProseHost(chat, 1), -1);
+});
+
+test('findAttachedProseHost: target not a tagged burst → -1', () => {
+    const chat = [
+        { is_user: false, mes: 'prose', extra: {} },
+        { is_user: false, mes: 'more prose', extra: {} },
+    ];
+    assert.equal(findAttachedProseHost(chat, 1), -1);
+});
+
+test('findAttachedProseHost: target is user burst → -1 (only char bursts pair with host prose)', () => {
+    const chat = [
+        { is_user: false, mes: 'prose', extra: {} },
+        { is_user: true, mes: '[SMS]\n- yo', extra: { sillyphone: { from: 'user', msgs: ['yo'], ts: 1 } } },
+    ];
+    assert.equal(findAttachedProseHost(chat, 1), -1);
+});
+
+test('findAttachedProseHost: idx 0 or invalid → -1', () => {
+    const chat = [
+        { is_user: false, mes: '[SMS]\n- a', extra: { sillyphone: { from: 'char', msgs: ['a'], ts: 1 } } },
+    ];
+    assert.equal(findAttachedProseHost(chat, 0), -1);
+    assert.equal(findAttachedProseHost(chat, -1), -1);
+    assert.equal(findAttachedProseHost([], 1), -1);
+});
+
+test('findAttachedProseHost: prev is system msg → -1', () => {
+    const chat = [
+        { is_user: false, is_system: true, mes: 'system', extra: {} },
+        { is_user: false, mes: '[SMS]\n- a', extra: { sillyphone: { from: 'char', msgs: ['a'], ts: 1 } } },
+    ];
+    assert.equal(findAttachedProseHost(chat, 1), -1);
 });
 
 test('rebuildBurstFromMes: drops attachment.image when user changes kind (image → video)', () => {

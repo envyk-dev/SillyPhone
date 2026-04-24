@@ -61,6 +61,26 @@ export function findLastCharBurstForReroll(chat) {
 }
 
 /**
+ * If chat[idx] is a tagged char SMS burst AND chat[idx-1] is the non-user,
+ * non-tagged AI message that originally carried the marker (prose host kept
+ * when smsOnly=off), return idx-1. Otherwise -1. Callers use this to cut the
+ * host in lock-step with the burst so a reroll or swipe-regen doesn't leave
+ * orphan prose behind.
+ * @param {ChatMessage[]} chat
+ * @param {number} idx
+ * @returns {number}
+ */
+export function findAttachedProseHost(chat, idx) {
+    if (!Array.isArray(chat) || !Number.isInteger(idx) || idx <= 0) return -1;
+    const burst = chat[idx];
+    if (!burst?.extra?.sillyphone || burst.extra.sillyphone.from !== 'char') return -1;
+    const prev = chat[idx - 1];
+    if (!prev || prev.is_user || prev.is_system) return -1;
+    if (prev.extra?.sillyphone) return -1;
+    return idx - 1;
+}
+
+/**
  * Plaintext transcript used as chat message `mes`. The LLM reads this form.
  * The [SMS] prefix plus bullet list reads unambiguously as a text-message
  * exchange rather than dialogue prose. Attachment lines like `[image: ...]`

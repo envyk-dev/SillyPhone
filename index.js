@@ -212,11 +212,15 @@ async function handleReroll() {
     const chat = ctx().chat;
     const lastIdx = chatSms.findLastCharBurstForReroll(chat);
     if (lastIdx < 0) return;
+    // If the burst has a prose host from the same generation (smsOnly=off),
+    // cut both so /trigger doesn't append a new turn after an orphan.
+    const proseIdx = chatSms.findAttachedProseHost(chat, lastIdx);
 
     modal.setRerollInFlight(true);
     modal.setSendDisabled(true);
     try {
         await cutChatMessage(lastIdx);
+        if (proseIdx >= 0) await cutChatMessage(proseIdx);
         modal.refresh();
         modal.showTyping();
         context.setSmsMode(true);
