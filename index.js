@@ -96,6 +96,7 @@ async function notifyOrPlay(parsed, chatIdx) {
             await modal.playCharBurst(parsed.msgs, ts, parsed.attachment ?? null, parsed.timing, chatIdx);
         } else {
             modal.appendBurst({ from: 'char', msgs: parsed.msgs, ts, attachment: parsed.attachment ?? null, chatIdx });
+            modal.scrollToBottom();
         }
         return;
     }
