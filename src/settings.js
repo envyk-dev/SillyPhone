@@ -19,7 +19,6 @@ const DEFAULTS = {
     showSmsRows: false,
     toastSound: false,
     forcefulChatInject: false,
-    markerExamples: true,
     theme: 'violet',
     rollingMemory: {
         enabled: false,

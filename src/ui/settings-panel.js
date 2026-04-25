@@ -77,7 +77,6 @@ const TOGGLES_BEHAVIOR = [
 ];
 const TOGGLES_AI = [
     { path: 'forcefulChatInject', label: 'Forceful chat inject', sub: 'Send marker instructions as user at depth 0 — strongest signal; may be echoed back by the model' },
-    { path: 'markerExamples', label: 'Inject recent marker examples', sub: 'Re-emit your last 2 SMS sends as <!--Phone:--> markers at depth 0 to counter format drift in long chats' },
 ];
 
 function template() {

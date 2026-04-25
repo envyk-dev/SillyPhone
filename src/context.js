@@ -2,18 +2,13 @@
 // - instructions (Flow A rules)
 // - summary (rolling memory)
 // - sms-mode (one-shot "reply via marker only" for Flow B)
-// - marker-examples (recent char bursts re-emitted as markers, depth 0,
-//   counters in-context [SMS]-format priming that drives format drift)
-import { setExtensionPrompt, ctx, EXTENSION_PROMPT, EXTENSION_PROMPT_ROLE } from './st.js';
+import { setExtensionPrompt, EXTENSION_PROMPT, EXTENSION_PROMPT_ROLE } from './st.js';
 import * as storage from './storage.js';
 import * as settings from './settings.js';
 
 const KEY_INSTRUCTIONS = 'sillyphone_instructions';
 const KEY_SUMMARY = 'sillyphone_summary';
 const KEY_SMS_MODE = 'sillyphone_sms_mode';
-const KEY_MARKER_EXAMPLES = 'sillyphone_marker_examples';
-
-const MARKER_EXAMPLES_LOOKBACK = 2;
 
 const SMS_MODE_TEXT = `The most recent user message is an [SMS] text from the user to {{char}}. Your ENTIRE response must be a single <!--Phone:{...}--> marker. Nothing before it. Nothing after it.
 
@@ -79,48 +74,8 @@ export function setSmsMode(on) {
     );
 }
 
-// Re-emit the most recent char-side bursts as <!--Phone:{...}--> markers at
-// depth 0. The chat history shows every prior burst as `[SMS]\n- ...` (the
-// display form) and never as a marker — markers were stripped from host rows
-// before storage. With many [SMS] examples and zero marker examples in the
-// model's context, format drift toward bare [SMS] output is almost
-// inevitable in long chats. This injection counters that by putting fresh
-// marker examples right before generation.
-export function updateMarkerExamplesPrompt() {
-    if (!settings.get('enabled') || !settings.get('markerExamples')) {
-        setExtensionPrompt(KEY_MARKER_EXAMPLES, '', EXTENSION_PROMPT.IN_CHAT, 0, EXTENSION_PROMPT_ROLE.SYSTEM);
-        return;
-    }
-    let chat;
-    try { chat = ctx().chat; }
-    catch { chat = null; }
-    if (!Array.isArray(chat)) {
-        setExtensionPrompt(KEY_MARKER_EXAMPLES, '', EXTENSION_PROMPT.IN_CHAT, 0, EXTENSION_PROMPT_ROLE.SYSTEM);
-        return;
-    }
-    const recent = [];
-    for (let i = chat.length - 1; i >= 0 && recent.length < MARKER_EXAMPLES_LOOKBACK; i--) {
-        const tag = chat[i]?.extra?.sillyphone;
-        if (tag?.from === 'char' && Array.isArray(tag.msgs)) recent.unshift(tag);
-    }
-    if (recent.length === 0) {
-        setExtensionPrompt(KEY_MARKER_EXAMPLES, '', EXTENSION_PROMPT.IN_CHAT, 0, EXTENSION_PROMPT_ROLE.SYSTEM);
-        return;
-    }
-    const markers = recent.map(tag => {
-        const obj = { msgs: tag.msgs };
-        if (tag.attachment) {
-            obj.attachment = { kind: tag.attachment.kind, description: tag.attachment.description };
-        }
-        return `<!--Phone:${JSON.stringify(obj)}-->`;
-    }).join('\n');
-    const text = `Format reminder: your recent SMS sends used these markers (the [SMS] blocks in chat history are how the same content displays — already-delivered, not a template). When you next send SMS, use the marker form, NOT a bare [SMS] block:\n${markers}`;
-    setExtensionPrompt(KEY_MARKER_EXAMPLES, text, EXTENSION_PROMPT.IN_CHAT, 0, EXTENSION_PROMPT_ROLE.SYSTEM);
-}
-
 export function updateAll() {
     updateInstructionsPrompt();
     updateSummaryPrompt();
-    updateMarkerExamplesPrompt();
     setSmsMode(false);
 }

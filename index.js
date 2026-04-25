@@ -154,7 +154,6 @@ async function handleMessageReceived(messageIdx) {
     lastParsedKey = key;
 
     const burstIdx = await cleanAndCommitCharBurst(messageIdx, msg, parsed);
-    context.updateMarkerExamplesPrompt();
     await notifyOrPlay(parsed, burstIdx);
 }
 
@@ -193,7 +192,6 @@ async function handleMessageEdited(messageIdx) {
     // If the edit dropped the attachment line (or changed kind), the file
     // is now orphaned — clean it up.
     if (oldImage && oldImage !== newImage) deleteImage(oldImage);
-    context.updateMarkerExamplesPrompt();
     modal.refresh();
     badge.refresh();
 }
