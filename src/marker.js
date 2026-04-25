@@ -19,22 +19,51 @@ const MARKER_RE = /<!--Phone:\s*(\{[\s\S]*?\})\s*-->/g;
 const LEAKED_BLOCK_RE = /(?:^|\n)[ \t]*\[SMS\][ \t]*(?:\n[ \t]*-[^\n]*)*/g;
 
 // Strict variant (requires at least one bullet) used only for fallback parsing.
-const LEAKED_BULLETS_RE = /(?:^|\n)[ \t]*\[SMS\][ \t]*((?:\n[ \t]*-[^\n]*)+)/;
+// /g so .exec can advance past rejected matches (code-fenced, mid-prose) and
+// keep scanning instead of locking onto the first hit.
+const LEAKED_BULLETS_RE = /(?:^|\n)[ \t]*\[SMS\][ \t]*((?:\n[ \t]*-[^\n]*)+)/g;
+
+// True if `pos` falls inside an unclosed ```...``` block, counting fences
+// from the start of the text. Used to skip leaked blocks the model put inside
+// example/tutorial code rather than as an actual send.
+/**
+ * @param {string} text
+ * @param {number} pos
+ * @returns {boolean}
+ */
+function isInsideCodeFence(text, pos) {
+    let count = 0;
+    let i = 0;
+    while (i < pos) {
+        if (text.startsWith('```', i)) {
+            count++;
+            i += 3;
+        } else {
+            i++;
+        }
+    }
+    return count % 2 === 1;
+}
 
 /**
  * @param {string} text
  * @returns {{ msgs: string[] } | null}
  */
 function parseLeakedBlock(text) {
-    const m = LEAKED_BULLETS_RE.exec(text);
-    if (!m) return null;
-    const msgs = [];
-    for (const line of m[1].split('\n')) {
-        const b = /^[ \t]*-\s*(.+?)[ \t]*$/.exec(line);
-        if (b && b[1]) msgs.push(b[1]);
+    LEAKED_BULLETS_RE.lastIndex = 0;
+    let m;
+    while ((m = LEAKED_BULLETS_RE.exec(text)) !== null) {
+        const headerStart = m.index + (text[m.index] === '\n' ? 1 : 0);
+        if (isInsideCodeFence(text, headerStart)) continue;
+        const msgs = [];
+        for (const line of m[1].split('\n')) {
+            const b = /^[ \t]*-\s*(.+?)[ \t]*$/.exec(line);
+            if (b && b[1]) msgs.push(b[1]);
+        }
+        if (msgs.length === 0) continue;
+        return { msgs };
     }
-    if (msgs.length === 0) return null;
-    return { msgs };
+    return null;
 }
 
 // Accepts string or {text, delay?, typeDuration?}. Returns {text, timing}

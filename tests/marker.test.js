@@ -186,6 +186,27 @@ test('parse: marker takes priority over leaked block if both present', () => {
     assert.deepEqual(parse(text), { msgs: ['fresh'] });
 });
 
+test('parse: fallback — leaked block inside a code fence is ignored', () => {
+    const text = 'Here is what the format looks like:\n```\n[SMS]\n- example one\n- example two\n```\nThat\'s it.';
+    assert.equal(parse(text), null);
+});
+
+test('parse: fallback — block after a closed code fence still parses', () => {
+    const text = '```\nirrelevant\n```\n[SMS]\n- hi\n- u up';
+    assert.deepEqual(parse(text), { msgs: ['hi', 'u up'] });
+});
+
+test('parse: fallback — second block parses if first is fenced', () => {
+    const text = '```\n[SMS]\n- ignored\n```\nlater:\n[SMS]\n- real one';
+    assert.deepEqual(parse(text), { msgs: ['real one'] });
+});
+
+test('parse: fallback — mid-line [SMS] reference does not parse', () => {
+    // [SMS] mid-line, no following bullets directly under a [SMS] header line.
+    const text = 'She glanced at her [SMS] inbox - nothing new.';
+    assert.equal(parse(text), null);
+});
+
 test('strip: removes leaked [SMS] block from displayed text', () => {
     const text = 'prose before\n[SMS]\n- hey\n- there\nprose after';
     const cleaned = strip(text);
