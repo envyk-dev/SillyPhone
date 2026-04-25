@@ -87,7 +87,7 @@ export function setSmsMode(on) {
 // inevitable in long chats. This injection counters that by putting fresh
 // marker examples right before generation.
 export function updateMarkerExamplesPrompt() {
-    if (!settings.get('enabled')) {
+    if (!settings.get('enabled') || !settings.get('markerExamples')) {
         setExtensionPrompt(KEY_MARKER_EXAMPLES, '', EXTENSION_PROMPT.IN_CHAT, 0, EXTENSION_PROMPT_ROLE.SYSTEM);
         return;
     }
