@@ -57,12 +57,31 @@ async function commitCharBurstFromMarker(hostIdx, parsedMsgs, attachment, hostRe
         from: 'char', msgs: parsedMsgs, ts, charName, userName, attachment,
     });
 
-    // If the host is empty (prose stripped away, or fast-SMS mode) cut it
-    // BEFORE pushing the burst. Doing it after-push has proven racy — the
-    // blank prose row would occasionally survive the /cut. Cutting first
-    // also means the burst lands at the host's former chat index.
+    // Host has no residual prose: convert it into the burst in place rather
+    // than cut+push. /cut would silent-fail in non-streaming generation
+    // (MESSAGE_RECEIVED fires before ST's addOneMessage, so the .mes row
+    // doesn't exist yet for /cut to find), leaving the raw [SMS] text
+    // visible on screen. In-place merge sidesteps the race entirely:
+    // - non-streaming: ST's upcoming addOneMessage mounts the row from our
+    //   merged data; row-observer applies .sp-chat-sms
+    // - streaming: row already exists with leaked text; updateMessageDom
+    //   syncs the body and we add .sp-chat-sms directly (row-observer only
+    //   fires on additions, not in-place edits)
+    // Host's extra.api/model/token_count metadata is preserved via spread.
     if (hostResidualText.trim() === '') {
-        await cutChatMessage(hostIdx);
+        const c = ctx();
+        const host = c.chat[hostIdx];
+        const merged = {
+            ...host,
+            mes: burstMsg.mes,
+            send_date: burstMsg.send_date,
+            extra: { ...(host?.extra || {}), sillyphone: burstMsg.extra.sillyphone },
+        };
+        c.chat[hostIdx] = merged;
+        updateMessageDom(hostIdx, merged);
+        document.querySelector(`#chat .mes[mesid="${hostIdx}"]`)?.classList.add('sp-chat-sms');
+        if (typeof c.saveChatDebounced === 'function') c.saveChatDebounced();
+        return hostIdx;
     }
 
     const burstIdx = pushChatMessage(burstMsg);
@@ -72,7 +91,8 @@ async function commitCharBurstFromMarker(hostIdx, parsedMsgs, attachment, hostRe
 
 // Strip marker/blockquote/verbatim-line prose from the host AI message and
 // commit the SMS burst. Mutates msg.mes only when residual prose remains,
-// otherwise the empty host gets cut by commitCharBurstFromMarker.
+// otherwise the empty host gets converted in place into the burst by
+// commitCharBurstFromMarker (no cut+push, see comment there).
 async function cleanAndCommitCharBurst(messageIdx, msg, parsed) {
     let stripped = cleanHostProse(msg.mes || '', parsed.msgs);
     if (settings.get('smsOnly')) stripped = '';
